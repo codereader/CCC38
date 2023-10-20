@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
+using System.Reflection.Metadata.Ecma335;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Text;
@@ -14,16 +15,231 @@ public class Program
         //Level1();
         //Level2();
         //Level3();
-        Level4();
-        //Level5();
+        //Level4();
+        Level5();
 
         Console.WriteLine("Done");
+    }
+
+    private static List<Vector2> WaterDirections = new List<Vector2>()
+    {
+        {new Vector2(1, 0) },
+        {new Vector2(-1, 0) },
+        {new Vector2(0, 1) },
+        {new Vector2(0, -1) },
+        {new Vector2(1, -1) },
+        {new Vector2(1, 1) },
+        {new Vector2(-1, 1) },
+        {new Vector2(-1, -1) }
+    };
+
+
+    private static void Level5()
+    {
+        for (var inputFileNumber = 1; inputFileNumber <= 5; inputFileNumber++)
+        {
+            var inputfilename = $"../../../level5_{inputFileNumber}.in";
+            var outputfilename = $"../../../level5_{inputFileNumber}.out";
+
+            Console.WriteLine(inputfilename);
+
+            var lines = File.ReadAllLines(inputfilename).ToList();
+
+            using var outputWriter = new StreamWriter(outputfilename);
+
+            int mapHeight = int.Parse(lines.First());
+            var map = lines.Skip(1).Take(mapHeight).ToList();
+            var mapWidth = map.First().Length;
+
+            var inputs = lines.Skip(1 + mapHeight + 1).ToList();
+            var output = new StringBuilder();
+
+            foreach (var input in inputs)
+            {
+                var coords1 = input.Split(',').Select(int.Parse).ToArray();
+                var startPos = new Vector2(coords1[0], coords1[1]);
+
+                var availablePositions = new Stack<Vector2>();
+                availablePositions.Push(startPos);
+
+                var islandPositions = new HashSet<Vector2>();
+
+                var floodFillDirections = new List<Vector2>()
+                {
+                    {new Vector2(1, 0) },
+                    {new Vector2(-1, 0) },
+                    {new Vector2(0, 1) },
+                    {new Vector2(0, -1) }
+                };
+
+                // flood fill island
+                while (availablePositions.Count > 0)
+                {
+                    var nextPos = availablePositions.Pop();
+
+                    islandPositions.Add(nextPos); // mark as done
+
+                    foreach (var dir in floodFillDirections)
+                    {
+                        var candidate = nextPos + dir;
+
+                        if (candidate.Y < 0 || candidate.Y >= map.Count ||
+                            candidate.X < 0 || candidate.X >= mapWidth)
+                        {
+                            continue; // out of bounds
+                        }
+
+                        if (!islandPositions.Contains(candidate) && map[(int)candidate.Y][(int)candidate.X] == 'L')
+                        {
+                            availablePositions.Push(candidate);
+                        }
+                    }
+                }
+
+                var minX = islandPositions.Min(p => p.X);
+                var maxX = islandPositions.Max(p => p.X);
+                var minY = islandPositions.Min(p => p.Y);
+                var maxY = islandPositions.Max(p => p.Y);
+
+                var validMinX = minX - 1;
+                var validMinY = minY - 1;
+                var validMaxX = maxX + 1;
+                var validMaxY = maxY + 1;
+
+                var leftEdge = islandPositions.First(p => p.X == minX);
+                var firstWaterTile = new Vector2(leftEdge.X - 1, leftEdge.Y);
+
+                if (leftEdge.X < 0) throw new ArgumentOutOfRangeException("Start X out of range");
+
+                // find sea route around the island
+                var startRoute = new Route();
+                startRoute.AddStartPoint(firstWaterTile);
+
+                var routesToInvestigate = new SortedList<int, List<Route>>();
+                routesToInvestigate.Add(startRoute.Length, new List<Route> { startRoute });
+
+                var visitedPoints = new HashSet<Vector2>();
+                visitedPoints.Add(firstWaterTile);
+
+                Route? winningRoute = null;
+
+                var StartingDirections = new List<Vector2>
+                {
+                    new Vector2(0, +1),
+                    new Vector2(+1, +1),
+                };
+
+                // First round we only go to the south or south east
+                var directions = StartingDirections;
+
+                while (routesToInvestigate.Count > 0)
+                {
+                    // Pick one of the shortest routes first
+                    var shortestRoutes = routesToInvestigate.First().Value;
+
+                    var route = shortestRoutes[shortestRoutes.Count - 1];
+                    shortestRoutes.RemoveAt(shortestRoutes.Count - 1);
+
+                    if (shortestRoutes.Count == 0)
+                    {
+                        routesToInvestigate.Remove(route.Length);
+                    }
+
+                    var currentPos = route.EndPoint;
+
+                    foreach (var direction in directions)
+                    {
+                        var targetPoint = currentPos + direction;
+
+                        if (targetPoint.Y < validMinY || targetPoint.Y > validMaxY ||
+                            targetPoint.X < validMinX || targetPoint.X > validMaxX)
+                        {
+                            continue; // out of valid bounds
+                        }
+
+                        if (visitedPoints.Contains(targetPoint))
+                        {
+                            if (targetPoint == firstWaterTile && RouteIsValid(route, validMinX, validMinY, validMaxX, validMaxY))
+                            {
+                                // Don't add the starting point to the route
+                                winningRoute = route;
+                                routesToInvestigate.Clear();
+                                break;
+                            }
+
+                            continue;
+                        }
+
+                        if (map[(int)targetPoint.Y][(int)targetPoint.X] == 'L')
+                        {
+                            visitedPoints.Add(targetPoint);
+                            continue;
+                        }
+
+                        // If the route is crossing itself, discard
+                        if (route.PointIsCrossing(currentPos, targetPoint))
+                        {
+                            visitedPoints.Add(targetPoint);
+                            continue; // route would cross itself
+                        }
+
+                        var newRoute = route.Clone();
+
+                        newRoute.AddPoint(targetPoint);
+
+                        if (!routesToInvestigate.TryGetValue(newRoute.Length, out var targetRoutes))
+                        {
+                            targetRoutes = new List<Route>();
+                            routesToInvestigate.Add(newRoute.Length, targetRoutes);
+                        }
+                        targetRoutes.Add(newRoute);
+                        visitedPoints.Add(targetPoint);
+                    }
+
+                    directions = WaterDirections; // From now on consider all options
+                }
+
+                if (winningRoute == null)
+                {
+                    throw new InvalidOperationException("No solution found");
+                }
+
+                output.AppendLine(winningRoute.ToString());
+            }
+
+            outputWriter.Write(output.ToString());
+        }
+    }
+
+    private static bool RouteIsValid(Route route, float minX, float minY, float maxX, float maxY)
+    {
+        var routeMinX = int.MaxValue;
+        var routeMinY = int.MaxValue;
+        var routeMaxX = int.MinValue;
+        var routeMaxY = int.MinValue;
+
+        foreach (var point in route.Points)
+        {
+            if (point.X < routeMinX) routeMinX = (int)point.X;
+            if (point.X > routeMaxX) routeMaxX = (int)point.X;
+            if (point.Y < routeMinY) routeMinY = (int)point.Y;
+            if (point.Y > routeMaxY) routeMaxY = (int)point.Y;
+        }
+
+        if (routeMinX == minX && routeMaxX == maxX && routeMaxY == maxY && routeMinY == minY)
+        {
+            return true;
+        }
+
+        return false;
     }
 
     public class Route
     {
         private HashSet<Vector2> _halfPoints = new();
         private List<Vector2> _points = new();
+
+        public IEnumerable<Vector2> Points => _points;
 
         public Vector2 EndPoint => _points[_points.Count - 1];
 
@@ -109,17 +325,7 @@ public class Program
 
                 routesToInvestigate.Add(startRoute.Length, new List<Route> { startRoute });
 
-                var directions = new List<Vector2>()
-                {
-                    {new Vector2(1, 0) },
-                    {new Vector2(-1, 0) },
-                    {new Vector2(0, 1) },
-                    {new Vector2(0, -1) },
-                    {new Vector2(1, -1) },
-                    {new Vector2(1, 1) },
-                    {new Vector2(-1, 1) },
-                    {new Vector2(-1, -1) }
-                };
+                var directions = WaterDirections;
 
                 Route? winningRoute = null;
 
