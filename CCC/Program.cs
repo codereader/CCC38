@@ -16,7 +16,8 @@ public class Program
         //Level2();
         //Level3();
         //Level4();
-        Level5();
+        //Level5_6("5");
+        Level5_6("6");
 
         Console.WriteLine("Done");
     }
@@ -34,12 +35,12 @@ public class Program
     };
 
 
-    private static void Level5()
+    private static void Level5_6(string level)
     {
         for (var inputFileNumber = 1; inputFileNumber <= 5; inputFileNumber++)
         {
-            var inputfilename = $"../../../level5_{inputFileNumber}.in";
-            var outputfilename = $"../../../level5_{inputFileNumber}.out";
+            var inputfilename = $"../../../level{level}_{inputFileNumber}.in";
+            var outputfilename = $"../../../level{level}_{inputFileNumber}.out";
 
             Console.WriteLine(inputfilename);
 
