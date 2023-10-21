@@ -19,6 +19,11 @@ public class Bounds
         return obj is Bounds other && Min.Equals(other.Min) && Max.Equals(other.Max);
     }
 
+    public bool ContainsPoint(Vector2 point)
+    {
+        return point.Y >= Min.Y && point.Y <= Max.Y && point.X >= Min.X && point.X <= Max.X;
+    }
+
     [Pure]
     public Bounds ExpandBy(float amount)
     {

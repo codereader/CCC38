@@ -10,11 +10,12 @@ public class Route
     public IEnumerable<Vector2> Points => _points;
 
     public Vector2 EndPoint => _points[_points.Count - 1];
-    public Vector2 EndPointMinus1 => _points[_points.Count - 2];
+
+    public Vector2 SecondToLastPoint => _points[_points.Count - 2];
 
     public int Length => _points.Count;
 
-    public float PyLengthSquared
+    public float PythagoreanLengthSquared
     {
         get
         {

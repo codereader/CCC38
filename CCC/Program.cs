@@ -38,6 +38,12 @@ public class Program
         {new Vector2(0, -1) }
     };
 
+    private static List<Vector2> SouthAndSouthEast = new List<Vector2>
+    {
+        new Vector2(0, +1),
+        new Vector2(+1, +1),
+    };
+
     private static void Level7()
     {
         foreach (var scenario in GetScenariosForLevel(7))
@@ -50,8 +56,7 @@ public class Program
 
             foreach (var input in scenario.InputLines)
             {
-                var coords1 = input.Split(',').Select(int.Parse).ToArray();
-                var startPos = new Vector2(coords1[0], coords1[1]);
+                var startPos = ParseVector2(input);
 
                 var islandPositions = FloodFillIsland(scenario.Map, startPos);
 
@@ -75,13 +80,13 @@ public class Program
 
                 // We only consider beach tiles for the tight route around the island
                 var beachTiles = new HashSet<Vector2>();
-                
+
                 foreach (var landTile in islandPositions)
                 {
                     foreach (var direction in OrthogonalDirections)
                     {
                         var targetPoint = landTile + direction;
-                
+
                         if (IsWater(scenario.Map, targetPoint))
                         {
                             beachTiles.Add(targetPoint);
@@ -89,17 +94,10 @@ public class Program
                     }
                 }
 
-                var winningRoutes = new List<Route>();
-                //Route? winningRoute = null;
-
-                var StartingDirections = new List<Vector2>
-                {
-                    new Vector2(0, +1),
-                    new Vector2(+1, +1),
-                };
+                Route? winningRoute = null;
 
                 // First round we only go to the south or south east
-                var directions = StartingDirections;
+                var directions = SouthAndSouthEast;
 
                 while (routesToInvestigate.Count > 0)
                 {
@@ -122,8 +120,7 @@ public class Program
                     {
                         var targetPoint = currentPos + direction;
 
-                        if (targetPoint.Y < validBounds.Min.Y || targetPoint.Y > validBounds.Max.Y ||
-                            targetPoint.X < validBounds.Min.X || targetPoint.X > validBounds.Max.X)
+                        if (!validBounds.ContainsPoint(targetPoint))
                         {
                             continue; // out of valid bounds
                         }
@@ -133,7 +130,7 @@ public class Program
                             continue;
                         }
 
-                        if (route.Length > 1 && (targetPoint - route.EndPointMinus1).LengthSquared() == 1.0f)
+                        if (route.Length > 1 && (targetPoint - route.SecondToLastPoint).LengthSquared() == 1.0f)
                         {
                             continue; // skip
                         }
@@ -144,8 +141,7 @@ public class Program
                                 !RouteIsEncirclingOtherIsland(route, startPos, islandPositions, scenario.Map))
                             {
                                 // Don't add the starting point to the route
-                                winningRoutes.Add(route);
-                                //winningRoute = route;
+                                winningRoute = route;
                                 routesToInvestigate.Clear();
                                 break;
                             }
@@ -175,30 +171,21 @@ public class Program
 
                         newRoute.AddPoint(targetPoint);
 
-                        // Skip any route candidates that are longer than a winning candidate
-                        if (winningRoutes.Any(r => r.Length < newRoute.Length))
-                        {
-                            continue;
-                        }
-
                         if (!routesToInvestigate.TryGetValue(newRoute.Length, out var targetRoutes))
                         {
                             targetRoutes = new List<Route>();
                             routesToInvestigate.Add(newRoute.Length, targetRoutes);
                         }
                         targetRoutes.Add(newRoute);
-                        //visitedPoints.Add(targetPoint);
                     }
 
                     directions = SeaRouteDirections; // From now on consider all options
                 }
 
-                if (winningRoutes.Count == 0)
+                if (winningRoute == null)
                 {
                     throw new InvalidOperationException("No solution found");
                 }
-
-                var winningRoute = winningRoutes.OrderBy(r => r.Length).First();
 
                 // Optimize the winning route for distance
                 var optimizedRoute = OptimizeRoute(winningRoute, startPos, scenario.Map, islandPositions, validBounds);
@@ -227,18 +214,9 @@ public class Program
             //Console.WriteLine("Starting Situation");
             //VisualizeRoute(route, map, fixedPoints);
 
-            var nonFixedIndex = fixedPoints.Count == 0 ? 0 : points.FindIndex(p => !fixedPoints.Contains(p));
-
-            // Move forward until we find a diagonal
-            //while (nonFixedIndex < points.Count - 1 && (points[nonFixedIndex] - points[nonFixedIndex + 1]).LengthSquared() == 1)
-            //{
-            //    fixedPoints.Add(points[nonFixedIndex]);
-            //    ++nonFixedIndex;
-            //}
+            var nonFixedIndex = points.FindIndex(p => !fixedPoints.Contains(p));
 
             if (nonFixedIndex >= points.Count - 2) break; // no more points to optimise
-
-            // non fixed index is now right before a bend
 
             var routeStem = new Route();
 
@@ -250,19 +228,17 @@ public class Program
             var sourcePoint = points[nonFixedIndex];
             Route? suitableRoute = null;
 
-            // Move back from the target to find the best possible shortcut
+            // Move back from the end of the route to find the shortcut cutting of the most
             for (var targetIndex = points.Count - 1; targetIndex > nonFixedIndex + 1; --targetIndex)
             {
                 var candidate = routeStem.Clone();
 
-                // Assemble a more or less straight line to the target index
+                // Assemble a (rasterized) straight line to the target index
                 var targetPoint = points[targetIndex];
 
                 var isValid = true;
 
-                var line = GetPointsOnLine(sourcePoint, targetPoint).ToList();
-
-                foreach (var pointOnLine in line)
+                foreach (var pointOnLine in GetPointsOnLine(sourcePoint, targetPoint))
                 {
                     if (IsLand(map, pointOnLine) || candidate.ContainsPoint(pointOnLine))
                     {
@@ -281,14 +257,11 @@ public class Program
                     candidate.AddPoint(points[i]);
                 }
 
-                // We have a shorter route?
-                if (candidate.PyLengthSquared >= route.PyLengthSquared || candidate.Length < 4)
+                // Did we find a shorter route?
+                if (candidate.Length < 4 || candidate.PythagoreanLengthSquared >= route.PythagoreanLengthSquared)
                 {
                     continue;
                 }
-
-                //Console.WriteLine("Candidate:\n{0}", candidate.ToString());
-                //VisualizeRoute(candidate, map, fixedPoints.Concat(new[] { targetPoint }));
 
                 // Check route validity
                 if (!RouteIsValid(candidate, validBounds) ||
@@ -296,12 +269,6 @@ public class Program
                 {
                     continue;
                 }
-
-                // Mark the whole shortcut as fixed
-                //foreach (var point in line)
-                //{
-                //    fixedPoints.Add(point);
-                //}
 
                 suitableRoute = candidate;
                 break;
@@ -318,12 +285,12 @@ public class Program
             }
         }
 
-        //Console.WriteLine("Optimised Route:");
-        //VisualizeRoute(route, map, route.Points);
-
         return route;
     }
 
+    /// <summary>
+    /// Return the rasterized line from start to end, including the start / end points themselves.
+    /// </summary>
     private static IEnumerable<Vector2> GetPointsOnLine(Vector2 start, Vector2 end)
     {
         var delta = end - start;
@@ -352,7 +319,7 @@ public class Program
         yield return end;
     }
 
-    private static void VisualizeRoute(Route route, List<string> map, IEnumerable<Vector2> highlightPoints = null)
+    private static void VisualizeRoute(Route route, List<string> map, IEnumerable<Vector2>? highlightPoints = null)
     {
         var highlights = highlightPoints?.ToList() ?? new List<Vector2>();
         var defaultColour = Console.ForegroundColor;
@@ -392,12 +359,7 @@ public class Program
         var availablePositions = new Stack<Vector2>();
         availablePositions.Push(startPos);
 
-        var visitedPositions = new HashSet<Vector2>();
-
-        foreach (var position in route.Points)
-        {
-            visitedPositions.Add(position);
-        }
+        var visitedPositions = new HashSet<Vector2>(route.Points);
 
         // Flood fill, including water tiles, breaking on any foreign island
         while (availablePositions.Count > 0)
@@ -415,8 +377,7 @@ public class Program
                     continue;
                 }
 
-                if (map[(int)candidate.Y][(int)candidate.X] == 'L' && 
-                    !islandPositions.Contains(candidate))
+                if (IsLand(map, candidate) && !islandPositions.Contains(candidate))
                 {
                     return true;
                 }
@@ -447,8 +408,7 @@ public class Program
 
             foreach (var input in scenario.InputLines)
             {
-                var coords1 = input.Split(',').Select(int.Parse).ToArray();
-                var startPos = new Vector2(coords1[0], coords1[1]);
+                var startPos = ParseVector2(input);
 
                 var islandPositions = FloodFillIsland(scenario.Map, startPos);
 
@@ -472,14 +432,8 @@ public class Program
 
                 Route? winningRoute = null;
 
-                var StartingDirections = new List<Vector2>
-                {
-                    new Vector2(0, +1),
-                    new Vector2(+1, +1),
-                };
-
                 // First round we only go to the south or south east
-                var directions = StartingDirections;
+                var directions = SouthAndSouthEast;
 
                 while (routesToInvestigate.Count > 0)
                 {
@@ -500,8 +454,7 @@ public class Program
                     {
                         var targetPoint = currentPos + direction;
 
-                        if (targetPoint.Y < validBounds.Min.Y || targetPoint.Y > validBounds.Max.Y ||
-                            targetPoint.X < validBounds.Min.X || targetPoint.X > validBounds.Max.X)
+                        if (!validBounds.ContainsPoint(targetPoint))
                         {
                             continue; // out of valid bounds
                         }
@@ -574,8 +527,7 @@ public class Program
     {
         var islandPositions = new HashSet<Vector2>();
 
-        var mapHeight = map.Count;
-        var mapWidth = map[0].Length;
+        var mapBounds = new Bounds(0, 0, map[0].Length - 1, map.Count - 1);
 
         var availablePositions = new Stack<Vector2>();
         availablePositions.Push(startPos);
@@ -593,8 +545,7 @@ public class Program
             {
                 var candidate = nextPos + dir;
 
-                if (candidate.Y < 0 || candidate.Y >= mapHeight ||
-                    candidate.X < 0 || candidate.X >= mapWidth)
+                if (!mapBounds.ContainsPoint(candidate))
                 {
                     continue; // out of bounds
                 }
@@ -621,12 +572,7 @@ public class Program
 
             foreach (var input in scenario.InputLines)
             {
-                var coordPair = input.Split(' ').ToArray();
-                var coords1 = coordPair[0].Split(',').Select(int.Parse).ToArray();
-                var startPos = new Vector2(coords1[0], coords1[1]);
-
-                var coords2 = coordPair[1].Split(',').Select(int.Parse).ToArray();
-                var endPos = new Vector2(coords2[0], coords2[1]);
+                var (startPos, endPos) = ParseCoordinatePair(input);
 
                 var startRoute = new Route();
                 startRoute.AddStartPoint(startPos);
@@ -634,7 +580,6 @@ public class Program
                 var visitedPoints = new HashSet<Vector2>();
 
                 var routesToInvestigate = new SortedList<int, List<Route>>();
-
                 routesToInvestigate.Add(startRoute.Length, new List<Route> { startRoute });
 
                 var directions = SeaRouteDirections;
@@ -660,8 +605,7 @@ public class Program
                     {
                         var targetPoint = currentPos + direction;
 
-                        if (targetPoint.Y < 0 || targetPoint.Y >= scenario.MapHeight ||
-                            targetPoint.X < 0 || targetPoint.X >= scenario.MapWidth)
+                        if (!scenario.MapBounds.ContainsPoint(targetPoint))
                         {
                             continue; // out of bounds
                         }
@@ -730,21 +674,19 @@ public class Program
 
             foreach (var input in scenario.InputLines)
             {
-                var coordPairs = input.Split(' ').ToArray();
+                var numberPairs = input.Split(' ').ToArray();
 
                 var visitedPositions = new HashSet<Vector2>();
                 var intersectsWithItself = false;
 
-                var startCoords = coordPairs.First().Split(',').Select(int.Parse).ToArray();
-                var startPos = new Vector2(startCoords[0], startCoords[1]);
+                var startPos = ParseVector2(numberPairs.First());
                 visitedPositions.Add(startPos);
 
                 var lastPos = startPos;
 
-                foreach (var coordPair in coordPairs.Skip(1))
+                foreach (var coordPair in numberPairs.Skip(1))
                 {
-                    var coords = coordPair.Split(',').Select(int.Parse).ToArray();
-                    var pos = new Vector2(coords[0], coords[1]);
+                    var pos = ParseVector2(coordPair);
 
                     if (visitedPositions.Contains(pos))
                     {
@@ -787,12 +729,7 @@ public class Program
 
             foreach (var input in scenario.InputLines)
             {
-                var coordPair = input.Split(' ').ToArray();
-                var coords1 = coordPair[0].Split(',').Select(int.Parse).ToArray();
-                var pos1 = new Vector2(coords1[0], coords1[1]);
-
-                var coords2 = coordPair[1].Split(',').Select(int.Parse).ToArray();
-                var pos2 = new Vector2(coords2[0], coords2[1]);
+                var (pos1, pos2) = ParseCoordinatePair(input);
 
                 var availablePositions = new Stack<Vector2>();
                 availablePositions.Push(pos1);
@@ -819,8 +756,7 @@ public class Program
                     {
                         var candidate = nextPos + dir;
 
-                        if (candidate.Y < 0 || candidate.Y >= scenario.MapHeight ||
-                            candidate.X < 0 || candidate.X >= scenario.MapWidth)
+                        if (!scenario.MapBounds.ContainsPoint(candidate))
                         {
                             continue; // out of bounds
                         }
@@ -851,11 +787,9 @@ public class Program
 
             foreach (var input in scenario.InputLines)
             {
-                var coords = input.Split(',').Select(int.Parse).ToArray();
-                var x = coords[0];
-                var y = coords[1];
+                var pos = ParseVector2(input);
 
-                output.Append(scenario.Map[y][x]);
+                output.Append(scenario.Map[(int)pos.Y][(int)pos.X]);
                 output.AppendLine();
             }
 
@@ -874,6 +808,7 @@ public class Program
             MapHeight = int.Parse(Lines.First());
             Map = Lines.Skip(1).Take(MapHeight).ToList();
             MapWidth = Map.First().Length;
+            MapBounds = new Bounds(0, 0, MapWidth - 1, MapHeight - 1);
 
             InputLines = Lines.Skip(1 + MapHeight + 1).ToList();
         }
@@ -890,8 +825,28 @@ public class Program
         public int MapWidth { get; }
         public int MapHeight { get; }
 
+        public Bounds MapBounds { get; }
+
         public List<string> InputLines { get; }
     }
 
     private static IEnumerable<Scenario> GetScenariosForLevel(int level) => Enumerable.Range(1, 5).Select(stage => new Scenario(level, stage));
+
+    /// <summary>
+    /// Parse a single input coordinate pair like "56,89" into a Vector2
+    /// </summary>
+    private static Vector2 ParseVector2(string input)
+    {
+        var coords = input.Split(',').Select(int.Parse).ToArray();
+        return new Vector2(coords[0], coords[1]);
+    }
+
+    /// <summary>
+    /// Parse a coordinate pair from a string, like "5,78 9,79"
+    /// </summary>
+    private static (Vector2, Vector2) ParseCoordinatePair(string input)
+    {
+        var pairs = input.Split(' ').ToArray();
+        return (ParseVector2(pairs[0]), ParseVector2(pairs[1]));
+    }
 }
