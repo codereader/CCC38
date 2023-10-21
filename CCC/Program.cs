@@ -46,19 +46,14 @@ public class Program
 
             using var outputWriter = new StreamWriter(scenario.OutputFilename);
 
-            int mapHeight = int.Parse(scenario.Lines.First());
-            var map = scenario.Lines.Skip(1).Take(mapHeight).ToList();
-            var mapWidth = map.First().Length;
-
-            var inputs = scenario.Lines.Skip(1 + mapHeight + 1).ToList();
             var output = new StringBuilder();
 
-            foreach (var input in inputs)
+            foreach (var input in scenario.InputLines)
             {
                 var coords1 = input.Split(',').Select(int.Parse).ToArray();
                 var startPos = new Vector2(coords1[0], coords1[1]);
 
-                var islandPositions = FloodFillIsland(map, startPos);
+                var islandPositions = FloodFillIsland(scenario.Map, startPos);
 
                 var islandBounds = Bounds.CreateFromSet(islandPositions);
                 var validBounds = islandBounds.ExpandBy(1);
@@ -68,7 +63,7 @@ public class Program
 
                 if (leftEdge.X < 0) throw new ArgumentOutOfRangeException("Start X out of range");
 
-                // find sea route around the island
+                // find a tight sea route around the island
                 var startRoute = new Route();
                 startRoute.AddStartPoint(firstWaterTile);
 
@@ -78,6 +73,7 @@ public class Program
                 var visitedPoints = new HashSet<Vector2>();
                 visitedPoints.Add(firstWaterTile);
 
+                // We only consider beach tiles for the tight route around the island
                 var beachTiles = new HashSet<Vector2>();
                 
                 foreach (var landTile in islandPositions)
@@ -86,7 +82,7 @@ public class Program
                     {
                         var targetPoint = landTile + direction;
                 
-                        if (map[(int)targetPoint.Y][(int)targetPoint.X] == 'W')
+                        if (IsWater(scenario.Map, targetPoint))
                         {
                             beachTiles.Add(targetPoint);
                         }
@@ -145,7 +141,7 @@ public class Program
                         if (visitedPoints.Contains(targetPoint))
                         {
                             if (targetPoint == firstWaterTile && RouteIsValid(route, validBounds) &&
-                                !RouteIsEncirclingOtherIsland(route, startPos, islandPositions, map))
+                                !RouteIsEncirclingOtherIsland(route, startPos, islandPositions, scenario.Map))
                             {
                                 // Don't add the starting point to the route
                                 winningRoutes.Add(route);
@@ -162,7 +158,7 @@ public class Program
                             continue;
                         }
 
-                        if (map[(int)targetPoint.Y][(int)targetPoint.X] == 'L')
+                        if (IsLand(scenario.Map, targetPoint))
                         {
                             visitedPoints.Add(targetPoint);
                             continue;
@@ -205,7 +201,7 @@ public class Program
                 var winningRoute = winningRoutes.OrderBy(r => r.Length).First();
 
                 // Optimize the winning route for distance
-                var optimizedRoute = OptimizeRoute(winningRoute, startPos, map, islandPositions, validBounds);
+                var optimizedRoute = OptimizeRoute(winningRoute, startPos, scenario.Map, islandPositions, validBounds);
                 //VisualizeRoute(optimizedRoute, map, optimizedRoute.Points);
 
                 output.AppendLine(winningRoute.ToString());
@@ -268,8 +264,7 @@ public class Program
 
                 foreach (var pointOnLine in line)
                 {
-                    if (map[(int)pointOnLine.Y][(int)pointOnLine.X] == 'L' ||
-                        candidate.ContainsPoint(pointOnLine))
+                    if (IsLand(map, pointOnLine) || candidate.ContainsPoint(pointOnLine))
                     {
                         isValid = false;
                         break;
@@ -448,19 +443,14 @@ public class Program
 
             using var outputWriter = new StreamWriter(scenario.OutputFilename);
 
-            int mapHeight = int.Parse(scenario.Lines.First());
-            var map = scenario.Lines.Skip(1).Take(mapHeight).ToList();
-            var mapWidth = map.First().Length;
-
-            var inputs = scenario.Lines.Skip(1 + mapHeight + 1).ToList();
             var output = new StringBuilder();
 
-            foreach (var input in inputs)
+            foreach (var input in scenario.InputLines)
             {
                 var coords1 = input.Split(',').Select(int.Parse).ToArray();
                 var startPos = new Vector2(coords1[0], coords1[1]);
 
-                var islandPositions = FloodFillIsland(map, startPos);
+                var islandPositions = FloodFillIsland(scenario.Map, startPos);
 
                 var islandBounds = Bounds.CreateFromSet(islandPositions);
                 var validBounds = islandBounds.ExpandBy(1);
@@ -529,7 +519,7 @@ public class Program
                             continue;
                         }
 
-                        if (map[(int)targetPoint.Y][(int)targetPoint.X] == 'L')
+                        if (IsLand(scenario.Map, targetPoint))
                         {
                             visitedPoints.Add(targetPoint);
                             continue;
@@ -573,6 +563,11 @@ public class Program
     private static bool IsLand(IList<string> map, Vector2 position)
     {
         return map[(int)position.Y][(int)position.X] == 'L';
+    }
+    
+    private static bool IsWater(IList<string> map, Vector2 position)
+    {
+        return map[(int)position.Y][(int)position.X] == 'W';
     }
 
     private static HashSet<Vector2> FloodFillIsland(List<string> map, Vector2 startPos)
@@ -622,14 +617,9 @@ public class Program
 
             using var outputWriter = new StreamWriter(scenario.OutputFilename);
 
-            int mapHeight = int.Parse(scenario.Lines.First());
-            var map = scenario.Lines.Skip(1).Take(mapHeight).ToList();
-            var mapWidth = map.First().Length;
-
-            var inputs = scenario.Lines.Skip(1 + mapHeight + 1).ToList();
             var output = new StringBuilder();
 
-            foreach (var input in inputs)
+            foreach (var input in scenario.InputLines)
             {
                 var coordPair = input.Split(' ').ToArray();
                 var coords1 = coordPair[0].Split(',').Select(int.Parse).ToArray();
@@ -670,8 +660,8 @@ public class Program
                     {
                         var targetPoint = currentPos + direction;
 
-                        if (targetPoint.Y < 0 || targetPoint.Y >= map.Count ||
-                            targetPoint.X < 0 || targetPoint.X >= mapWidth)
+                        if (targetPoint.Y < 0 || targetPoint.Y >= scenario.MapHeight ||
+                            targetPoint.X < 0 || targetPoint.X >= scenario.MapWidth)
                         {
                             continue; // out of bounds
                         }
@@ -689,7 +679,7 @@ public class Program
                             break;
                         }
 
-                        if (map[(int)targetPoint.Y][(int)targetPoint.X] == 'L')
+                        if (IsLand(scenario.Map, targetPoint))
                         {
                             visitedPoints.Add(targetPoint);
                             continue;
@@ -736,16 +726,9 @@ public class Program
 
             using var outputWriter = new StreamWriter(scenario.OutputFilename);
 
-            int mapHeight = int.Parse(scenario.Lines.First());
-
-            var map = scenario.Lines.Skip(1).Take(mapHeight).ToList();
-
-            var mapWidth = map.First().Length;
-
-            var inputs = scenario.Lines.Skip(1 + mapHeight + 1).ToList();
             var output = new StringBuilder();
 
-            foreach (var input in inputs)
+            foreach (var input in scenario.InputLines)
             {
                 var coordPairs = input.Split(' ').ToArray();
 
@@ -800,14 +783,9 @@ public class Program
 
             using var outputWriter = new StreamWriter(scenario.OutputFilename);
 
-            int mapHeight = int.Parse(scenario.Lines.First());
-
-            var map = scenario.Lines.Skip(1).Take(mapHeight).ToList();
-
-            var inputs = scenario.Lines.Skip(1 + mapHeight + 1).ToList();
             var output = new StringBuilder();
 
-            foreach (var input in inputs)
+            foreach (var input in scenario.InputLines)
             {
                 var coordPair = input.Split(' ').ToArray();
                 var coords1 = coordPair[0].Split(',').Select(int.Parse).ToArray();
@@ -825,8 +803,6 @@ public class Program
 
                 var directions = OrthogonalDirections;
 
-                var mapWidth = map.First().Length;
-
                 while (availablePositions.Count > 0)
                 {
                     var nextPos = availablePositions.Pop();
@@ -843,13 +819,13 @@ public class Program
                     {
                         var candidate = nextPos + dir;
 
-                        if (candidate.Y < 0 || candidate.Y >= map.Count ||
-                            candidate.X < 0 || candidate.X >= mapWidth)
+                        if (candidate.Y < 0 || candidate.Y >= scenario.MapHeight ||
+                            candidate.X < 0 || candidate.X >= scenario.MapWidth)
                         {
                             continue; // out of bounds
                         }
 
-                        if (!visitedPositions.Contains(candidate) && map[(int)candidate.Y][(int)candidate.X] == 'L')
+                        if (!visitedPositions.Contains(candidate) && IsLand(scenario.Map, candidate))
                         {
                             availablePositions.Push(candidate);
                         }
@@ -871,20 +847,15 @@ public class Program
 
             using var outputWriter = new StreamWriter(scenario.OutputFilename);
 
-            int mapHeight = int.Parse(scenario.Lines.First());
-
-            var map = scenario.Lines.Skip(1).Take(mapHeight).ToList();
-
-            var inputs = scenario.Lines.Skip(1 + mapHeight + 1).ToList();
             var output = new StringBuilder();
 
-            foreach (var input in inputs)
+            foreach (var input in scenario.InputLines)
             {
                 var coords = input.Split(',').Select(int.Parse).ToArray();
                 var x = coords[0];
                 var y = coords[1];
 
-                output.Append(map[y][x]);
+                output.Append(scenario.Map[y][x]);
                 output.AppendLine();
             }
 
@@ -899,17 +870,28 @@ public class Program
             InputFilename = $"../../../level{level}_{stage}.in";
             OutputFilename = Path.ChangeExtension(InputFilename, ".out");
             Lines = File.ReadAllLines(InputFilename).ToList();
+
+            MapHeight = int.Parse(Lines.First());
+            Map = Lines.Skip(1).Take(MapHeight).ToList();
+            MapWidth = Map.First().Length;
+
+            InputLines = Lines.Skip(1 + MapHeight + 1).ToList();
         }
 
         public string InputFilename { get; }
         public string OutputFilename { get; }
         public List<string> Lines { get; }
+
+        /// <summary>
+        /// The whole map, each row is a string with 'L' being Land, and 'W' being water
+        /// </summary>
+        public List<string> Map { get; }
+
+        public int MapWidth { get; }
+        public int MapHeight { get; }
+
+        public List<string> InputLines { get; }
     }
 
-    private static IEnumerable<Scenario> GetScenariosForLevel(int level)
-    {
-        return Enumerable.Range(1, 5).Select(stage => new Scenario(level, stage));
-    }
-
-    private static IEnumerable<string> GetInputFiles(int level) => Enumerable.Range(1, 5).Select(i => $"../../../level{level}_{i}.in");
+    private static IEnumerable<Scenario> GetScenariosForLevel(int level) => Enumerable.Range(1, 5).Select(stage => new Scenario(level, stage));
 }
