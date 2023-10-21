@@ -38,22 +38,6 @@ public class Program
         {new Vector2(0, -1) }
     };
 
-    public class Bounds
-    {
-        public Bounds(int minX, int minY, int maxX, int maxY) :
-            this((float)minX, (float)minY, (float)maxX, (float)maxY)
-        {}
-
-        public Bounds(float minX, float minY, float maxX, float maxY)
-        {
-            Min = new Vector2(minX, minY);
-            Max = new Vector2(maxX, maxY);
-        }
-
-        public Vector2 Min { get; set; }
-        public Vector2 Max { get; set; }
-    }
-
     private static void Level7()
     {
         for (var inputFileNumber = 1; inputFileNumber <= 5; inputFileNumber++)
@@ -416,7 +400,7 @@ public class Program
         yield return end;
     }
 
-    private static void VisualizeRoute(Route winningRoute, List<string> map, IEnumerable<Vector2> highlightPoints = null)
+    private static void VisualizeRoute(Route route, List<string> map, IEnumerable<Vector2> highlightPoints = null)
     {
         var highlights = highlightPoints?.ToList() ?? new List<Vector2>();
         var defaultColour = Console.ForegroundColor;
@@ -431,7 +415,7 @@ public class Program
 
                 Console.ForegroundColor = highlights.Contains(pos) ? ConsoleColor.Red : defaultColour;
 
-                if (winningRoute.ContainsPoint(pos))
+                if (route.ContainsPoint(pos))
                 {
                     Console.Write('R');
                 }
@@ -515,80 +499,6 @@ public class Program
         }
 
         return false;
-    }
-
-    public class Route
-    {
-        private HashSet<Vector2> _halfPoints = new();
-        private List<Vector2> _points = new();
-
-        public IEnumerable<Vector2> Points => _points;
-
-        public Vector2 EndPoint => _points[_points.Count - 1];
-        public Vector2 EndPointMinus1 => _points[_points.Count - 2];
-
-        public int Length => _points.Count;
-
-        public float PyLengthSquared
-        {
-            get
-            {
-                if (_points.Count <= 1) return 0;
-
-                var length = 0;
-
-                for (int i = 1; i < _points.Count; i++)
-                {
-                    length += (int)(_points[i - 1] - _points[i]).LengthSquared();
-                }
-
-                return length;
-            }
-        }
-
-        internal void AddStartPoint(Vector2 point)
-        {
-            _points.Add(point);
-            _halfPoints.Add(point);
-        }
-
-        internal void AddPoint(Vector2 targetPoint)
-        {
-            if (_points.Count == 0)
-            {
-                AddStartPoint(targetPoint);
-                return;
-            }
-
-            _halfPoints.Add((EndPoint + targetPoint) / 2);
-            _points.Add(targetPoint);
-        }
-
-        internal bool PointIsCrossing(Vector2 currentPoint, Vector2 targetPoint)
-        {
-            var halfPoint = (currentPoint + targetPoint) / 2;
-            return _halfPoints.Contains(halfPoint);
-        }
-
-        internal Route Clone()
-        {
-            var clone = new Route();
-
-            clone._points = _points.ToList();
-            clone._halfPoints = new HashSet<Vector2>(_halfPoints);
-
-            return clone;
-        }
-
-        public override string ToString()
-        {
-            return string.Join(' ', _points.Select(p => $"{(int)p.X},{(int)p.Y}"));
-        }
-
-        internal bool ContainsPoint(Vector2 targetPoint)
-        {
-            return _points.Contains(targetPoint);
-        }
     }
 
     private static void Level5_6(string level)
