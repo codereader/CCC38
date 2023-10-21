@@ -126,8 +126,8 @@ public class Program
                 var startRoute = new Route();
                 startRoute.AddStartPoint(firstWaterTile);
 
-                var routesToInvestigate = new SortedList<int, HashSet<Route>>();
-                routesToInvestigate.Add(startRoute.Length, new HashSet<Route> { startRoute });
+                var routesToInvestigate = new SortedList<int, List<Route>>();
+                routesToInvestigate.Add(startRoute.Length, new List<Route> { startRoute });
 
                 var visitedPoints = new HashSet<Vector2>();
                 visitedPoints.Add(firstWaterTile);
@@ -241,7 +241,7 @@ public class Program
 
                         if (!routesToInvestigate.TryGetValue(newRoute.Length, out var targetRoutes))
                         {
-                            targetRoutes = new HashSet<Route>();
+                            targetRoutes = new List<Route>();
                             routesToInvestigate.Add(newRoute.Length, targetRoutes);
                         }
                         targetRoutes.Add(newRoute);
@@ -588,51 +588,6 @@ public class Program
         internal bool ContainsPoint(Vector2 targetPoint)
         {
             return _points.Contains(targetPoint);
-        }
-
-        public override bool Equals(object? obj)
-        {
-            if (obj is Route other)
-            {
-                if (other.Length != Length)
-                {
-                    return false;
-                }
-
-                for (int i = 0; i < _points.Count; i++)
-                {
-                    if (other._points[i] != _points[i])
-                    {
-                        return false;
-                    }
-                }
-
-                return true;
-            }
-
-            return false;
-        }
-
-        public override int GetHashCode()
-        {
-            int result = 17;
-
-            for (int i = 0; i < _points.Count; i++)
-            {
-                unchecked
-                {
-                    result = result * 23 + _points[i].GetHashCode();
-                }
-            }
-            return result;
-        }
-
-        public class LengthComparer : IComparer<Route>
-        {
-            public int Compare(Route? x, Route? y)
-            {
-                return x.Length.CompareTo(y.Length);
-            }
         }
     }
 
