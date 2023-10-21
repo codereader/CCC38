@@ -11,8 +11,8 @@ public class Program
         Level2();
         Level3();
         Level4();
-        Level5_6("5");
-        Level5_6("6");
+        Level5_6(5);
+        Level5_6(6);
         Level7();
 
         Console.WriteLine("Done");
@@ -40,22 +40,17 @@ public class Program
 
     private static void Level7()
     {
-        for (var inputFileNumber = 1; inputFileNumber <= 5; inputFileNumber++)
+        foreach (var scenario in GetScenariosForLevel(7))
         {
-            var inputfilename = $"../../../level7_{inputFileNumber}.in";
-            var outputfilename = $"../../../level7_{inputFileNumber}.out";
+            Console.WriteLine(scenario.InputFilename);
 
-            Console.WriteLine(inputfilename);
+            using var outputWriter = new StreamWriter(scenario.OutputFilename);
 
-            var lines = File.ReadAllLines(inputfilename).ToList();
-
-            using var outputWriter = new StreamWriter(outputfilename);
-
-            int mapHeight = int.Parse(lines.First());
-            var map = lines.Skip(1).Take(mapHeight).ToList();
+            int mapHeight = int.Parse(scenario.Lines.First());
+            var map = scenario.Lines.Skip(1).Take(mapHeight).ToList();
             var mapWidth = map.First().Length;
 
-            var inputs = lines.Skip(1 + mapHeight + 1).ToList();
+            var inputs = scenario.Lines.Skip(1 + mapHeight + 1).ToList();
             var output = new StringBuilder();
 
             foreach (var input in inputs)
@@ -445,24 +440,19 @@ public class Program
         return routeBounds.Equals(validBounds);
     }
 
-    private static void Level5_6(string level)
+    private static void Level5_6(int level)
     {
-        for (var inputFileNumber = 1; inputFileNumber <= 5; inputFileNumber++)
+        foreach (var scenario in GetScenariosForLevel(level))
         {
-            var inputfilename = $"../../../level{level}_{inputFileNumber}.in";
-            var outputfilename = $"../../../level{level}_{inputFileNumber}.out";
+            Console.WriteLine(scenario.InputFilename);
 
-            Console.WriteLine(inputfilename);
+            using var outputWriter = new StreamWriter(scenario.OutputFilename);
 
-            var lines = File.ReadAllLines(inputfilename).ToList();
-
-            using var outputWriter = new StreamWriter(outputfilename);
-
-            int mapHeight = int.Parse(lines.First());
-            var map = lines.Skip(1).Take(mapHeight).ToList();
+            int mapHeight = int.Parse(scenario.Lines.First());
+            var map = scenario.Lines.Skip(1).Take(mapHeight).ToList();
             var mapWidth = map.First().Length;
 
-            var inputs = lines.Skip(1 + mapHeight + 1).ToList();
+            var inputs = scenario.Lines.Skip(1 + mapHeight + 1).ToList();
             var output = new StringBuilder();
 
             foreach (var input in inputs)
@@ -472,14 +462,10 @@ public class Program
 
                 var islandPositions = FloodFillIsland(map, startPos);
 
-                var minX = islandPositions.Min(p => p.X);
-                var maxX = islandPositions.Max(p => p.X);
-                var minY = islandPositions.Min(p => p.Y);
-                var maxY = islandPositions.Max(p => p.Y);
+                var islandBounds = Bounds.CreateFromSet(islandPositions);
+                var validBounds = islandBounds.ExpandBy(1);
 
-                var validBounds = new Bounds(minX: minX - 1, minY: minY - 1, maxX: maxX + 1, maxY: maxY + 1);
-
-                var leftEdge = islandPositions.First(p => p.X == minX);
+                var leftEdge = islandPositions.First(p => p.X == islandBounds.Min.X);
                 var firstWaterTile = new Vector2(leftEdge.X - 1, leftEdge.Y);
 
                 if (leftEdge.X < 0) throw new ArgumentOutOfRangeException("Start X out of range");
@@ -630,22 +616,17 @@ public class Program
 
     private static void Level4()
     {
-        for (var inputFileNumber = 1; inputFileNumber <= 5; inputFileNumber++)
+        foreach (var scenario in GetScenariosForLevel(4))
         {
-            var inputfilename = $"../../../level4_{inputFileNumber}.in";
-            var outputfilename = $"../../../level4_{inputFileNumber}.out";
+            Console.WriteLine(scenario.InputFilename);
 
-            Console.WriteLine(inputfilename);
+            using var outputWriter = new StreamWriter(scenario.OutputFilename);
 
-            var lines = File.ReadAllLines(inputfilename).ToList();
-
-            using var outputWriter = new StreamWriter(outputfilename);
-
-            int mapHeight = int.Parse(lines.First());
-            var map = lines.Skip(1).Take(mapHeight).ToList();
+            int mapHeight = int.Parse(scenario.Lines.First());
+            var map = scenario.Lines.Skip(1).Take(mapHeight).ToList();
             var mapWidth = map.First().Length;
 
-            var inputs = lines.Skip(1 + mapHeight + 1).ToList();
+            var inputs = scenario.Lines.Skip(1 + mapHeight + 1).ToList();
             var output = new StringBuilder();
 
             foreach (var input in inputs)
@@ -749,24 +730,19 @@ public class Program
 
     private static void Level3()
     {
-        for (var inputFileNumber = 1; inputFileNumber <= 5; inputFileNumber++)
+        foreach (var scenario in GetScenariosForLevel(3))
         {
-            var inputfilename = $"../../../level3_{inputFileNumber}.in";
-            var outputfilename = $"../../../level3_{inputFileNumber}.out";
+            Console.WriteLine(scenario.InputFilename);
 
-            Console.WriteLine(inputfilename);
+            using var outputWriter = new StreamWriter(scenario.OutputFilename);
 
-            var lines = File.ReadAllLines(inputfilename).ToList();
+            int mapHeight = int.Parse(scenario.Lines.First());
 
-            using var outputWriter = new StreamWriter(outputfilename);
-
-            int mapHeight = int.Parse(lines.First());
-
-            var map = lines.Skip(1).Take(mapHeight).ToList();
+            var map = scenario.Lines.Skip(1).Take(mapHeight).ToList();
 
             var mapWidth = map.First().Length;
 
-            var inputs = lines.Skip(1 + mapHeight + 1).ToList();
+            var inputs = scenario.Lines.Skip(1 + mapHeight + 1).ToList();
             var output = new StringBuilder();
 
             foreach (var input in inputs)
@@ -818,22 +794,17 @@ public class Program
 
     private static void Level2()
     {
-        for (var inputFileNumber = 1; inputFileNumber <= 5; inputFileNumber++)
+        foreach (var scenario in GetScenariosForLevel(2))
         {
-            var inputfilename = $"../../../level2_{inputFileNumber}.in";
-            var outputfilename = $"../../../level2_{inputFileNumber}.out";
+            Console.WriteLine(scenario.InputFilename);
 
-            Console.WriteLine(inputfilename);
+            using var outputWriter = new StreamWriter(scenario.OutputFilename);
 
-            var lines = File.ReadAllLines(inputfilename).ToList();
+            int mapHeight = int.Parse(scenario.Lines.First());
 
-            using var outputWriter = new StreamWriter(outputfilename);
+            var map = scenario.Lines.Skip(1).Take(mapHeight).ToList();
 
-            int mapHeight = int.Parse(lines.First());
-
-            var map = lines.Skip(1).Take(mapHeight).ToList();
-
-            var inputs = lines.Skip(1 + mapHeight + 1).ToList();
+            var inputs = scenario.Lines.Skip(1 + mapHeight + 1).ToList();
             var output = new StringBuilder();
 
             foreach (var input in inputs)
@@ -894,22 +865,17 @@ public class Program
 
     private static void Level1()
     {
-        for (var inputFileNumber = 1; inputFileNumber <= 5; inputFileNumber++)
+        foreach (var scenario in GetScenariosForLevel(1))
         {
-            var inputfilename = $"../../../level1_{inputFileNumber}.in";
-            var outputfilename = $"../../../level1_{inputFileNumber}.out";
+            Console.WriteLine(scenario.InputFilename);
 
-            Console.WriteLine(inputfilename);
+            using var outputWriter = new StreamWriter(scenario.OutputFilename);
 
-            var lines = File.ReadAllLines(inputfilename).ToList();
+            int mapHeight = int.Parse(scenario.Lines.First());
 
-            using var outputWriter = new StreamWriter(outputfilename);
+            var map = scenario.Lines.Skip(1).Take(mapHeight).ToList();
 
-            int mapHeight = int.Parse(lines.First());
-
-            var map = lines.Skip(1).Take(mapHeight).ToList();
-
-            var inputs = lines.Skip(1 + mapHeight + 1).ToList();
+            var inputs = scenario.Lines.Skip(1 + mapHeight + 1).ToList();
             var output = new StringBuilder();
 
             foreach (var input in inputs)
@@ -925,4 +891,25 @@ public class Program
             outputWriter.Write(output.ToString());
         }
     }
+
+    private class Scenario
+    {
+        public Scenario(int level, int stage)
+        {
+            InputFilename = $"../../../level{level}_{stage}.in";
+            OutputFilename = Path.ChangeExtension(InputFilename, ".out");
+            Lines = File.ReadAllLines(InputFilename).ToList();
+        }
+
+        public string InputFilename { get; }
+        public string OutputFilename { get; }
+        public List<string> Lines { get; }
+    }
+
+    private static IEnumerable<Scenario> GetScenariosForLevel(int level)
+    {
+        return Enumerable.Range(1, 5).Select(stage => new Scenario(level, stage));
+    }
+
+    private static IEnumerable<string> GetInputFiles(int level) => Enumerable.Range(1, 5).Select(i => $"../../../level{level}_{i}.in");
 }
