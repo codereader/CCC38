@@ -18,7 +18,7 @@ public class Program
         Console.WriteLine("Done");
     }
 
-    private static List<Vector2> WaterDirections = new List<Vector2>()
+    private static List<Vector2> SeaRouteDirections = new List<Vector2>()
     {
         {new Vector2(1, 0) },
         {new Vector2(-1, 0) },
@@ -30,7 +30,7 @@ public class Program
         {new Vector2(-1, -1) }
     };
 
-    private static List<Vector2> FloodFillDirections = new List<Vector2>()
+    private static List<Vector2> OrthogonalDirections = new List<Vector2>()
     {
         {new Vector2(1, 0) },
         {new Vector2(-1, 0) },
@@ -63,36 +63,7 @@ public class Program
                 var coords1 = input.Split(',').Select(int.Parse).ToArray();
                 var startPos = new Vector2(coords1[0], coords1[1]);
 
-                var availablePositions = new Stack<Vector2>();
-                availablePositions.Push(startPos);
-
-                var islandPositions = new HashSet<Vector2>();
-
-                var floodFillDirections = FloodFillDirections;
-
-                // flood fill island
-                while (availablePositions.Count > 0)
-                {
-                    var nextPos = availablePositions.Pop();
-
-                    islandPositions.Add(nextPos); // mark as done
-
-                    foreach (var dir in floodFillDirections)
-                    {
-                        var candidate = nextPos + dir;
-
-                        if (candidate.Y < 0 || candidate.Y >= map.Count ||
-                            candidate.X < 0 || candidate.X >= mapWidth)
-                        {
-                            continue; // out of bounds
-                        }
-
-                        if (!islandPositions.Contains(candidate) && map[(int)candidate.Y][(int)candidate.X] == 'L')
-                        {
-                            availablePositions.Push(candidate);
-                        }
-                    }
-                }
+                var islandPositions = FloodFillIsland(map, startPos);
 
                 var minX = islandPositions.Min(p => p.X);
                 var maxX = islandPositions.Max(p => p.X);
@@ -120,7 +91,7 @@ public class Program
                 
                 foreach (var landTile in islandPositions)
                 {
-                    foreach (var direction in FloodFillDirections)
+                    foreach (var direction in OrthogonalDirections)
                     {
                         var targetPoint = landTile + direction;
                 
@@ -232,18 +203,13 @@ public class Program
                         //visitedPoints.Add(targetPoint);
                     }
 
-                    directions = WaterDirections; // From now on consider all options
+                    directions = SeaRouteDirections; // From now on consider all options
                 }
 
                 if (winningRoutes.Count == 0)
                 {
                     throw new InvalidOperationException("No solution found");
                 }
-
-                //foreach (var candidate in winningRoutes)
-                //{
-                //    VisualizeRoute(candidate, map);
-                //}
 
                 var winningRoute = winningRoutes.OrderBy(r => r.Length).First();
 
@@ -454,7 +420,7 @@ public class Program
 
             visitedPositions.Add(nextPos); // mark as done
 
-            foreach (var dir in FloodFillDirections)
+            foreach (var dir in OrthogonalDirections)
             {
                 var candidate = nextPos + dir;
 
@@ -526,42 +492,7 @@ public class Program
                 var coords1 = input.Split(',').Select(int.Parse).ToArray();
                 var startPos = new Vector2(coords1[0], coords1[1]);
 
-                var availablePositions = new Stack<Vector2>();
-                availablePositions.Push(startPos);
-
-                var islandPositions = new HashSet<Vector2>();
-
-                var floodFillDirections = new List<Vector2>()
-                {
-                    {new Vector2(1, 0) },
-                    {new Vector2(-1, 0) },
-                    {new Vector2(0, 1) },
-                    {new Vector2(0, -1) }
-                };
-
-                // flood fill island
-                while (availablePositions.Count > 0)
-                {
-                    var nextPos = availablePositions.Pop();
-
-                    islandPositions.Add(nextPos); // mark as done
-
-                    foreach (var dir in floodFillDirections)
-                    {
-                        var candidate = nextPos + dir;
-
-                        if (candidate.Y < 0 || candidate.Y >= map.Count ||
-                            candidate.X < 0 || candidate.X >= mapWidth)
-                        {
-                            continue; // out of bounds
-                        }
-
-                        if (!islandPositions.Contains(candidate) && map[(int)candidate.Y][(int)candidate.X] == 'L')
-                        {
-                            availablePositions.Push(candidate);
-                        }
-                    }
-                }
+                var islandPositions = FloodFillIsland(map, startPos);
 
                 var minX = islandPositions.Min(p => p.X);
                 var maxX = islandPositions.Max(p => p.X);
@@ -660,7 +591,7 @@ public class Program
                         visitedPoints.Add(targetPoint);
                     }
 
-                    directions = WaterDirections; // From now on consider all options
+                    directions = SeaRouteDirections; // From now on consider all options
                 }
 
                 if (winningRoute == null)
@@ -673,6 +604,50 @@ public class Program
 
             outputWriter.Write(output.ToString());
         }
+    }
+
+    private static bool IsLand(IList<string> map, Vector2 position)
+    {
+        return map[(int)position.Y][(int)position.X] == 'L';
+    }
+
+    private static HashSet<Vector2> FloodFillIsland(List<string> map, Vector2 startPos)
+    {
+        var islandPositions = new HashSet<Vector2>();
+
+        var mapHeight = map.Count;
+        var mapWidth = map[0].Length;
+
+        var availablePositions = new Stack<Vector2>();
+        availablePositions.Push(startPos);
+
+        var floodFillDirections = OrthogonalDirections;
+
+        // Find all land positions while we have any points to investigate
+        while (availablePositions.Count > 0)
+        {
+            var nextPos = availablePositions.Pop();
+
+            islandPositions.Add(nextPos); // mark as done
+
+            foreach (var dir in floodFillDirections)
+            {
+                var candidate = nextPos + dir;
+
+                if (candidate.Y < 0 || candidate.Y >= mapHeight ||
+                    candidate.X < 0 || candidate.X >= mapWidth)
+                {
+                    continue; // out of bounds
+                }
+
+                if (IsLand(map, candidate) && !islandPositions.Contains(candidate))
+                {
+                    availablePositions.Push(candidate);
+                }
+            }
+        }
+
+        return islandPositions;
     }
 
     private static void Level4()
@@ -713,7 +688,7 @@ public class Program
 
                 routesToInvestigate.Add(startRoute.Length, new List<Route> { startRoute });
 
-                var directions = WaterDirections;
+                var directions = SeaRouteDirections;
 
                 Route? winningRoute = null;
 
@@ -899,13 +874,7 @@ public class Program
 
                 bool isOnSameIsland = false;
 
-                var directions = new List<Vector2>()
-                {
-                    {new Vector2(1, 0) },
-                    {new Vector2(-1, 0) },
-                    {new Vector2(0, 1) },
-                    {new Vector2(0, -1) }
-                };
+                var directions = OrthogonalDirections;
 
                 var mapWidth = map.First().Length;
 
