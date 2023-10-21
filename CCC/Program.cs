@@ -65,14 +65,10 @@ public class Program
 
                 var islandPositions = FloodFillIsland(map, startPos);
 
-                var minX = islandPositions.Min(p => p.X);
-                var maxX = islandPositions.Max(p => p.X);
-                var minY = islandPositions.Min(p => p.Y);
-                var maxY = islandPositions.Max(p => p.Y);
+                var islandBounds = Bounds.CreateFromSet(islandPositions);
+                var validBounds = islandBounds.ExpandBy(1);
 
-                var validBounds = new Bounds(minX: minX - 1, minY: minY - 1, maxX: maxX + 1, maxY: maxY + 1);
-
-                var leftEdge = islandPositions.First(p => p.X == minX);
+                var leftEdge = islandPositions.First(p => p.X == islandBounds.Min.X);
                 var firstWaterTile = new Vector2(leftEdge.X - 1, leftEdge.Y);
 
                 if (leftEdge.X < 0) throw new ArgumentOutOfRangeException("Start X out of range");
@@ -413,7 +409,7 @@ public class Program
             visitedPositions.Add(position);
         }
 
-        // flood fill island
+        // Flood fill, including water tiles, breaking on any foreign island
         while (availablePositions.Count > 0)
         {
             var nextPos = availablePositions.Pop();
@@ -445,26 +441,8 @@ public class Program
 
     private static bool RouteIsValid(Route route, Bounds validBounds)
     {
-        var routeMinX = int.MaxValue;
-        var routeMinY = int.MaxValue;
-        var routeMaxX = int.MinValue;
-        var routeMaxY = int.MinValue;
-
-        foreach (var point in route.Points)
-        {
-            if (point.X < routeMinX) routeMinX = (int)point.X;
-            if (point.X > routeMaxX) routeMaxX = (int)point.X;
-            if (point.Y < routeMinY) routeMinY = (int)point.Y;
-            if (point.Y > routeMaxY) routeMaxY = (int)point.Y;
-        }
-
-        if (routeMinX == validBounds.Min.X && routeMaxX == validBounds.Max.X &&
-            routeMaxY == validBounds.Max.Y && routeMinY == validBounds.Min.Y)
-        {
-            return true;
-        }
-
-        return false;
+        var routeBounds = Bounds.CreateFromSet(route.Points);
+        return routeBounds.Equals(validBounds);
     }
 
     private static void Level5_6(string level)

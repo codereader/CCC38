@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System.Diagnostics.Contracts;
+using System.Numerics;
 
 namespace CCC;
 
@@ -12,4 +13,33 @@ public class Bounds
 
     public Vector2 Min { get; set; }
     public Vector2 Max { get; set; }
+
+    public override bool Equals(object? obj)
+    {
+        return obj is Bounds other && Min.Equals(other.Min) && Max.Equals(other.Max);
+    }
+
+    [Pure]
+    public Bounds ExpandBy(float amount)
+    {
+        return new Bounds(Min.X - amount, Min.Y - amount, Max.X + amount, Max.Y + amount);
+    }
+
+    public static Bounds CreateFromSet(IEnumerable<Vector2> set)
+    {
+        var minX = int.MaxValue;
+        var minY = int.MaxValue;
+        var maxX = int.MinValue;
+        var maxY = int.MinValue;
+
+        foreach (var point in set)
+        {
+            if (point.X < minX) minX = (int)point.X;
+            if (point.X > maxX) maxX = (int)point.X;
+            if (point.Y < minY) minY = (int)point.Y;
+            if (point.Y > maxY) maxY = (int)point.Y;
+        }
+
+        return new Bounds(minX: minX, minY: minY, maxX: maxX, maxY: maxY);
+    }
 }
