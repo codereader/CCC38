@@ -38,6 +38,22 @@ public class Program
         {new Vector2(0, -1) }
     };
 
+    public class Bounds
+    {
+        public Bounds(int minX, int minY, int maxX, int maxY) :
+            this((float)minX, (float)minY, (float)maxX, (float)maxY)
+        {}
+
+        public Bounds(float minX, float minY, float maxX, float maxY)
+        {
+            Min = new Vector2(minX, minY);
+            Max = new Vector2(maxX, maxY);
+        }
+
+        public Vector2 Min { get; set; }
+        public Vector2 Max { get; set; }
+    }
+
     private static void Level7()
     {
         for (var inputFileNumber = 1; inputFileNumber <= 5; inputFileNumber++)
@@ -99,10 +115,7 @@ public class Program
                 var minY = islandPositions.Min(p => p.Y);
                 var maxY = islandPositions.Max(p => p.Y);
 
-                var validMinX = minX - 1;
-                var validMinY = minY - 1;
-                var validMaxX = maxX + 1;
-                var validMaxY = maxY + 1;
+                var validBounds = new Bounds(minX: minX - 1, minY: minY - 1, maxX: maxX + 1, maxY: maxY + 1);
 
                 var leftEdge = islandPositions.First(p => p.X == minX);
                 var firstWaterTile = new Vector2(leftEdge.X - 1, leftEdge.Y);
@@ -167,8 +180,8 @@ public class Program
                     {
                         var targetPoint = currentPos + direction;
 
-                        if (targetPoint.Y < validMinY || targetPoint.Y > validMaxY ||
-                            targetPoint.X < validMinX || targetPoint.X > validMaxX)
+                        if (targetPoint.Y < validBounds.Min.Y || targetPoint.Y > validBounds.Max.Y ||
+                            targetPoint.X < validBounds.Min.X || targetPoint.X > validBounds.Max.X)
                         {
                             continue; // out of valid bounds
                         }
@@ -185,7 +198,7 @@ public class Program
 
                         if (visitedPoints.Contains(targetPoint))
                         {
-                            if (targetPoint == firstWaterTile && RouteIsValid(route, validMinX, validMinY, validMaxX, validMaxY) &&
+                            if (targetPoint == firstWaterTile && RouteIsValid(route, validBounds) &&
                                 !RouteIsEncirclingOtherIsland(route, startPos, islandPositions, map))
                             {
                                 // Don't add the starting point to the route
@@ -249,10 +262,10 @@ public class Program
                 //}
 
                 var winningRoute = winningRoutes.OrderBy(r => r.Length).First();
-                VisualizeRoute(winningRoute, map);
 
                 // Optimize the winning route for distance
-                var optimizedRoute = OptimizeRoute(winningRoute, startPos, map, islandPositions);
+                var optimizedRoute = OptimizeRoute(winningRoute, startPos, map, islandPositions, validBounds);
+                //VisualizeRoute(optimizedRoute, map, optimizedRoute.Points);
 
                 output.AppendLine(winningRoute.ToString());
             }
@@ -261,12 +274,12 @@ public class Program
         }
     }
 
-    private static Route OptimizeRoute(Route winningRoute, Vector2 startPos, List<string> map, HashSet<Vector2> islandPositions)
+    private static Route OptimizeRoute(Route winningRoute, Vector2 startPos, List<string> map, HashSet<Vector2> islandPositions, Bounds validBounds)
     {
         var route = winningRoute;
 
         // The points we can no longer move are stored here
-        var fixedPoints = new HashSet<Vector2> { route.Points.First() };
+        var fixedPoints = new HashSet<Vector2>();
 
         var optimizeFurther = true;
 
@@ -274,14 +287,17 @@ public class Program
         {
             var points = route.Points.ToList();
 
-            var nonFixedIndex = points.FindIndex(p => !fixedPoints.Contains(p));
+            //Console.WriteLine("Starting Situation");
+            //VisualizeRoute(route, map, fixedPoints);
+
+            var nonFixedIndex = fixedPoints.Count == 0 ? 0 : points.FindIndex(p => !fixedPoints.Contains(p));
 
             // Move forward until we find a diagonal
-            while (nonFixedIndex < points.Count - 1 && (points[nonFixedIndex] - points[nonFixedIndex + 1]).LengthSquared() == 1)
-            {
-                fixedPoints.Add(points[nonFixedIndex]);
-                ++nonFixedIndex;
-            }
+            //while (nonFixedIndex < points.Count - 1 && (points[nonFixedIndex] - points[nonFixedIndex + 1]).LengthSquared() == 1)
+            //{
+            //    fixedPoints.Add(points[nonFixedIndex]);
+            //    ++nonFixedIndex;
+            //}
 
             if (nonFixedIndex >= points.Count - 2) break; // no more points to optimise
 
@@ -306,10 +322,13 @@ public class Program
                 var targetPoint = points[targetIndex];
 
                 var isValid = true;
-                
-                foreach (var pointOnLine in GetPointsOnLine(targetPoint, sourcePoint))
+
+                var line = GetPointsOnLine(sourcePoint, targetPoint).ToList();
+
+                foreach (var pointOnLine in line)
                 {
-                    if (map[(int)pointOnLine.Y][(int)pointOnLine.X] == 'L')
+                    if (map[(int)pointOnLine.Y][(int)pointOnLine.X] == 'L' ||
+                        candidate.ContainsPoint(pointOnLine))
                     {
                         isValid = false;
                         break;
@@ -327,16 +346,26 @@ public class Program
                 }
 
                 // We have a shorter route?
-                if (candidate.Length >= route.Length || candidate.Length < 4)
+                if (candidate.PyLengthSquared >= route.PyLengthSquared || candidate.Length < 4)
                 {
                     continue;
                 }
 
-                // Is this route valid?
-                if (RouteIsEncirclingOtherIsland(candidate, startPos, islandPositions, map))
+                //Console.WriteLine("Candidate:\n{0}", candidate.ToString());
+                //VisualizeRoute(candidate, map, fixedPoints.Concat(new[] { targetPoint }));
+
+                // Check route validity
+                if (!RouteIsValid(candidate, validBounds) ||
+                    RouteIsEncirclingOtherIsland(candidate, startPos, islandPositions, map))
                 {
                     continue;
                 }
+
+                // Mark the whole shortcut as fixed
+                //foreach (var point in line)
+                //{
+                //    fixedPoints.Add(point);
+                //}
 
                 suitableRoute = candidate;
                 break;
@@ -348,10 +377,13 @@ public class Program
             if (suitableRoute != null)
             {
                 route = suitableRoute;
-                VisualizeRoute(route, map);
+                //VisualizeRoute(route, map, fixedPoints);
                 continue;
             }
         }
+
+        //Console.WriteLine("Optimised Route:");
+        //VisualizeRoute(route, map, route.Points);
 
         return route;
     }
@@ -360,30 +392,35 @@ public class Program
     {
         var delta = end - start;
 
-        if (delta.X > delta.Y)
+        if (Math.Abs(delta.X) > Math.Abs(delta.Y))
         {
-            var numSteps = delta.X;
+            var numSteps = Math.Abs(delta.X);
+            var deltaX = delta.X < 1 ? -1 : 1;
             for (var i = 0; i < numSteps; ++i)
             {
                 var yStep = delta.Y / numSteps;
-                yield return new Vector2(start.X + i, start.Y + yStep * i);
+                yield return new Vector2(start.X + deltaX * i, (int)(start.Y + yStep * i));
             }
         }
         else
         {
-            var numSteps = delta.Y;
+            var numSteps = Math.Abs(delta.Y);
+            var deltaY = delta.Y < 1 ? -1 : 1;
             for (var i = 0; i < numSteps; ++i)
             {
                 var xStep = delta.X / numSteps;
-                yield return new Vector2(start.X + xStep * i, start.Y + i);
+                yield return new Vector2((int)(start.X + xStep * i), start.Y + deltaY * i);
             }
         }
 
         yield return end;
     }
 
-    private static void VisualizeRoute(Route winningRoute, List<string> map)
+    private static void VisualizeRoute(Route winningRoute, List<string> map, IEnumerable<Vector2> highlightPoints = null)
     {
+        var highlights = highlightPoints?.ToList() ?? new List<Vector2>();
+        var defaultColour = Console.ForegroundColor;
+
         for (int y = 0; y < map.Count; ++y)
         {
             var line = map[y];
@@ -391,6 +428,8 @@ public class Program
             for (int x = 0; x < line.Length; ++x)
             {
                 var pos = new Vector2(x, y);
+
+                Console.ForegroundColor = highlights.Contains(pos) ? ConsoleColor.Red : defaultColour;
 
                 if (winningRoute.ContainsPoint(pos))
                 {
@@ -454,7 +493,7 @@ public class Program
     }
 
 
-    private static bool RouteIsValid(Route route, float minX, float minY, float maxX, float maxY)
+    private static bool RouteIsValid(Route route, Bounds validBounds)
     {
         var routeMinX = int.MaxValue;
         var routeMinY = int.MaxValue;
@@ -469,7 +508,8 @@ public class Program
             if (point.Y > routeMaxY) routeMaxY = (int)point.Y;
         }
 
-        if (routeMinX == minX && routeMaxX == maxX && routeMaxY == maxY && routeMinY == minY)
+        if (routeMinX == validBounds.Min.X && routeMaxX == validBounds.Max.X &&
+            routeMaxY == validBounds.Max.Y && routeMinY == validBounds.Min.Y)
         {
             return true;
         }
@@ -488,6 +528,23 @@ public class Program
         public Vector2 EndPointMinus1 => _points[_points.Count - 2];
 
         public int Length => _points.Count;
+
+        public float PyLengthSquared
+        {
+            get
+            {
+                if (_points.Count <= 1) return 0;
+
+                var length = 0;
+
+                for (int i = 1; i < _points.Count; i++)
+                {
+                    length += (int)(_points[i - 1] - _points[i]).LengthSquared();
+                }
+
+                return length;
+            }
+        }
 
         internal void AddStartPoint(Vector2 point)
         {
