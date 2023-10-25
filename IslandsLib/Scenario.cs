@@ -4,7 +4,7 @@ public class Scenario
 {
     public Scenario(int level, int stage)
     {
-        InputFilename = $"../../../level{level}_{stage}.in";
+        InputFilename = $"../../../../Files/level{level}_{stage}.in";
         OutputFilename = Path.ChangeExtension(InputFilename, ".out");
         Lines = File.ReadAllLines(InputFilename).ToList();
 
