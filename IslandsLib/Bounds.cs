@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics.Contracts;
 using System.Numerics;
 
-namespace CCC;
+namespace IslandsLib;
 
 public class Bounds
 {
