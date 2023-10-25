@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\CommonWPF\CommonWPF\CommonWPF.csproj" />
     <ProjectReference Include="..\IslandsLib\IslandsLib.csproj" />
   </ItemGroup>
 
