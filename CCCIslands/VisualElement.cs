@@ -1,13 +1,17 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using CommonWPF;
 
 namespace CCCIslands;
 
-class VisualElement
+public class VisualElement : ViewModelBase
 {
-    public int PositionX;
-    public int PositionY;
+    public int PositionX { get; set; }
+    public int PositionY { get; set; }
+    public string Value { get; set; }
+
+    public void UpdateVisuals()
+    {
+        RaisePropertyChanged(nameof(Value));
+    }
+
 }

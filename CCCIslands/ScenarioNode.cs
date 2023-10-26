@@ -14,4 +14,6 @@ class ScenarioNode
 
     public Scenario Scenario { get; set; }
 
+    public string Name { get; set; }
+
 }

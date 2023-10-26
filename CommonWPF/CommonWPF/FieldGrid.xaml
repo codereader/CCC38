@@ -1,0 +1,40 @@
+﻿<UserControl x:Class="CommonWPF.FieldGrid"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:CommonWPF"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+
+    <UserControl.Resources>
+        <local:PositionConverter x:Key="PositionConverter" />
+    </UserControl.Resources>
+    
+    <Grid>
+
+        <ItemsControl Name="FieldGridCanvas" >
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <Canvas Background="LightGray" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+
+            <ItemsControl.ItemContainerStyle>
+                <Style>
+                    <Setter Property="Canvas.Left" Value="{Binding PositionX, Converter={StaticResource PositionConverter}}" />
+                    <Setter Property="Canvas.Top" Value="{Binding PositionY, Converter={StaticResource PositionConverter}}" />
+                </Style>
+            </ItemsControl.ItemContainerStyle>
+
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Rectangle Fill="{Binding BackGroundColor}" 
+                               Height="{Binding Path=ItemSize, RelativeSource={RelativeSource AncestorType={x:Type local:FieldGrid}}}" 
+                               Width="{Binding Path=ItemSize, RelativeSource={RelativeSource AncestorType={x:Type local:FieldGrid}}}" />
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+    </Grid>
+</UserControl>

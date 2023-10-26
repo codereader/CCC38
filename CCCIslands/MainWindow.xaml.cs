@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -24,5 +25,18 @@ namespace CCCIslands
         {
             InitializeComponent();
         }
+
+        private void OnScenarioChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            if (DataContext is MainViewModel viewmodel)
+            {
+                if (e.NewValue is ScenarioNode node && node.Scenario != null)
+                {
+                    viewmodel.CurrentScenario = node.Scenario;
+                }
+            }
+        }
+
+
     }
 }
