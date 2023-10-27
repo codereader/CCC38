@@ -1,51 +1,50 @@
 ﻿using System.Data;
 using System.Numerics;
 using System.Text;
-using System.Xml;
 
 namespace IslandsLib;
 
 public class Navigator
 {
     private static List<Vector2> SeaRouteDirections = new List<Vector2>()
-{
-    {new Vector2(1, 0) },
-    {new Vector2(-1, 0) },
-    {new Vector2(0, 1) },
-    {new Vector2(0, -1) },
-    {new Vector2(1, -1) },
-    {new Vector2(1, 1) },
-    {new Vector2(-1, 1) },
-    {new Vector2(-1, -1) }
-};
+    {
+        {new Vector2(1, 0) },
+        {new Vector2(-1, 0) },
+        {new Vector2(0, 1) },
+        {new Vector2(0, -1) },
+        {new Vector2(1, -1) },
+        {new Vector2(1, 1) },
+        {new Vector2(-1, 1) },
+        {new Vector2(-1, -1) }
+    };
 
     private static List<Vector2> OrthogonalDirections = new List<Vector2>()
-{
-    {new Vector2(1, 0) },
-    {new Vector2(-1, 0) },
-    {new Vector2(0, 1) },
-    {new Vector2(0, -1) }
-};
+    {
+        {new Vector2(1, 0) },
+        {new Vector2(-1, 0) },
+        {new Vector2(0, 1) },
+        {new Vector2(0, -1) }
+    };
 
     private static List<Vector2> SouthAndSouthEast = new List<Vector2>
-{
-    new Vector2(0, +1),
-    new Vector2(+1, +1),
-};
-
-    public void Level7()
     {
-        foreach (var scenario in GetScenariosForLevel(7))
+        new Vector2(0, +1),
+        new Vector2(+1, +1),
+    };
+
+
+    public void WriteOutputFiles(int level)
+    {
+        foreach (var scenario in GetScenariosForLevel(level))
         {
             Console.WriteLine(scenario.InputFilename);
 
             using var outputWriter = new StreamWriter(scenario.OutputFilename);
-
             var output = new StringBuilder();
 
             foreach (var input in scenario.InputLines)
             {
-                output.AppendLine(SolveLevel7(scenario, input));
+                output.AppendLine(Solve(scenario, input));
             }
             outputWriter.Write(output.ToString());
         }
@@ -192,24 +191,6 @@ public class Navigator
     }
 
 
-    public void Level5_6(int level)
-    {
-        foreach (var scenario in GetScenariosForLevel(level))
-        {
-            Console.WriteLine(scenario.InputFilename);
-
-            using var outputWriter = new StreamWriter(scenario.OutputFilename);
-
-            var output = new StringBuilder();
-
-            foreach (var input in scenario.InputLines)
-            {
-                output.AppendLine(SolveLevel5(scenario, input));
-            }
-
-            outputWriter.Write(output.ToString());
-        }
-    }
     private static string SolveLevel5(Scenario scenario, string input)
     {
         var startPos = ParseVector2(input);
@@ -312,25 +293,6 @@ public class Navigator
         return winningRoute.ToString();
     }
 
-    public void Level4()
-    {
-        foreach (var scenario in GetScenariosForLevel(4))
-        {
-            Console.WriteLine(scenario.InputFilename);
-
-            using var outputWriter = new StreamWriter(scenario.OutputFilename);
-
-            var output = new StringBuilder();
-
-            foreach (var input in scenario.InputLines)
-            {
-                
-                output.AppendLine(SolveLevel4(scenario, input));
-            }
-
-            outputWriter.Write(output.ToString());
-        }
-    }
 
     private static string SolveLevel4(Scenario scenario, string input)
     {
@@ -421,24 +383,6 @@ public class Navigator
     }
 
 
-    public void Level3()
-    {
-        foreach (var scenario in GetScenariosForLevel(3))
-        {
-            Console.WriteLine(scenario.InputFilename);
-
-            using var outputWriter = new StreamWriter(scenario.OutputFilename);
-
-            var output = new StringBuilder();
-
-            foreach (var input in scenario.InputLines)
-            {
-                output.AppendLine(SolveLevel3(scenario, input));
-            }
-
-            outputWriter.Write(output.ToString());
-        }
-    }
 
     private static string SolveLevel3(Scenario scenario, string input)
     {
@@ -481,24 +425,6 @@ public class Navigator
     }
 
 
-    public void Level2()
-    {
-        foreach (var scenario in GetScenariosForLevel(2))
-        {
-            Console.WriteLine(scenario.InputFilename);
-
-            using var outputWriter = new StreamWriter(scenario.OutputFilename);
-
-            var output = new StringBuilder();
-
-            foreach (var input in scenario.InputLines)
-            {
-                output.AppendLine(SolveLevel2(scenario, input));
-            }
-
-            outputWriter.Write(output.ToString());
-        }
-    }
 
     private static string SolveLevel2(Scenario scenario, string input)
     {
@@ -545,25 +471,6 @@ public class Navigator
     }
 
 
-    public void Level1()
-    {
-        foreach (var scenario in GetScenariosForLevel(1))
-        {
-            Console.WriteLine(scenario.InputFilename);
-
-            using var outputWriter = new StreamWriter(scenario.OutputFilename);
-
-            var output = new StringBuilder();
-
-            foreach (var input in scenario.InputLines)
-            {
-                output.Append(SolveLevel1(scenario, input));
-                output.AppendLine();
-            }
-
-            outputWriter.Write(output.ToString());
-        }
-    }
     private static string SolveLevel1(Scenario scenario, string input)
     {
         var pos = ParseVector2(input);
@@ -586,8 +493,6 @@ public class Navigator
 
             _ => string.Empty
         };
-
-
 
     }
 

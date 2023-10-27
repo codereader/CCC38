@@ -8,13 +8,10 @@ public class Program
     {
         var navigator = new Navigator();
 
-        navigator.Level1();
-        navigator.Level2();
-        navigator.Level3();
-        navigator.Level4();
-        navigator.Level5_6(5);
-        navigator.Level5_6(6);
-        navigator.Level7();
+        for (int i = 0; i < 8; i++)
+        {
+            navigator.WriteOutputFiles(i);
+        }
 
         Console.WriteLine("Done");
     }

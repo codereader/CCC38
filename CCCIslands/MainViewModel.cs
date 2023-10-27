@@ -59,6 +59,79 @@ class MainViewModel : ViewModelBase
     }
 
 
+    public MainViewModel()
+    {
+        ParseScenarios();
+
+        CurrentInput = string.Empty;
+
+        PreviousInput = new RelayCommand(CanPreviousInput, DoPreviousInput);
+        NextInput = new RelayCommand(CanNextInput, DoNextInput);
+    }
+
+    public RelayCommand PreviousInput { get; }
+    public bool CanPreviousInput()
+    {
+        return CurrentScenario != null && _currentInputIndex > 0;
+    }
+    public void DoPreviousInput()
+    {
+        CurrentInput = CurrentScenario.InputLines[--_currentInputIndex];
+    }
+
+    public RelayCommand NextInput { get; }
+    public bool CanNextInput()
+    {
+        return CurrentScenario != null && _currentInputIndex < CurrentScenario.InputLines.Count - 1;
+    }
+    public void DoNextInput()
+    {
+        CurrentInput = CurrentScenario.InputLines[++_currentInputIndex];
+    }
+
+
+    private void ParseScenarios()
+    {
+        var inputPath = $"../../../../Files";
+        var inputFiles = Directory.GetFiles(inputPath, "*.in");
+
+        var regex = new Regex(@"level(\d)_(\d)");
+
+        foreach (var file in inputFiles)
+        {
+            if (!file.Contains("example"))
+            {
+                // level2_5.in
+                var fileName = Path.GetFileNameWithoutExtension(file);
+                var match = regex.Match(fileName);
+                var level = match.Groups[1].Value;
+                var fileNumber = match.Groups[2].Value;
+
+                var levelName = $"Level {level}";
+                var scenarioName = $"Scenario {fileNumber}";
+
+                var scenario = new Scenario(int.Parse(level), int.Parse(fileNumber));
+
+                var levelNode = Scenarios.FirstOrDefault(n => n.Name == levelName);
+                if (levelNode == null)
+                {
+                    levelNode = new ScenarioNode()
+                    {
+                        Name = levelName
+                    };
+                    Scenarios.Add(levelNode);
+                }
+
+                levelNode.Children.Add(new ScenarioNode()
+                {
+                    Name = scenarioName,
+                    Scenario = scenario
+                });
+
+            }
+        }
+    }
+
     private void ParseMap(Scenario currentScenario)
     {
         MapBitmap = new WriteableBitmap(
@@ -112,8 +185,7 @@ class MainViewModel : ViewModelBase
         RaisePropertyChanged(nameof(MapImage));
     }
 
-
-    public void DrawRectangle(int mapX, int mapY, int size, Color color)
+    private void DrawRectangle(int mapX, int mapY, int size, Color color)
     {
         // start positions on bitmap
         var startX = mapX * size;
@@ -131,8 +203,7 @@ class MainViewModel : ViewModelBase
         }
     }
 
-
-    public void SetPixel(int x, int y, Color color)
+    private void SetPixel(int x, int y, Color color)
     {
         var bytesPerPixel = (MapBitmap.Format.BitsPerPixel + 7) / 8;
         var stride = MapBitmap.PixelWidth * bytesPerPixel;
@@ -159,92 +230,5 @@ class MainViewModel : ViewModelBase
 
     }
 
-
-
-
-
-    public ObservableCollection<VisualElement> VisualCollection { get; set; } = new();
-
-    public MainViewModel()
-    {
-        ParseScenarios();
-
-        CurrentInput = string.Empty;
-
-        PreviousInput = new RelayCommand(CanPreviousInput, DoPreviousInput);
-        NextInput = new RelayCommand(CanNextInput, DoNextInput);
-    }
-
-    public RelayCommand PreviousInput { get; }
-    public bool CanPreviousInput()
-    {
-        return CurrentScenario != null && _currentInputIndex > 0;
-    }
-    public void DoPreviousInput()
-    {
-        CurrentInput = CurrentScenario.InputLines[--_currentInputIndex];
-    }
-
-    public RelayCommand NextInput { get; }
-    public bool CanNextInput()
-    {
-        return CurrentScenario != null && _currentInputIndex < CurrentScenario.InputLines.Count - 1;
-    }
-    public void DoNextInput()
-    {
-        CurrentInput = CurrentScenario.InputLines[++_currentInputIndex];
-
-    }
-
-
-    private void ParseScenarios()
-    {
-        var inputPath = $"../../../../Files";
-        var inputFiles = Directory.GetFiles(inputPath, "*.in");
-
-        var regex = new Regex(@"level(\d)_(\d)");
-
-        foreach (var file in inputFiles)
-        {
-            if (!file.Contains("example"))
-            {
-                // level2_5.in
-                var fileName = Path.GetFileNameWithoutExtension(file);
-                var match = regex.Match(fileName);
-                var level = match.Groups[1].Value;
-                var fileNumber = match.Groups[2].Value;
-
-                var levelName = $"Level {level}";
-                var scenarioName = $"Scenario {fileNumber}";
-
-                var scenario = new Scenario(int.Parse(level), int.Parse(fileNumber));
-
-                var levelNode = Scenarios.FirstOrDefault(n => n.Name == levelName);
-                if (levelNode == null)
-                {
-                    levelNode = new ScenarioNode()
-                    {
-                        Name = levelName
-                    };
-                    Scenarios.Add(levelNode);
-                }
-
-                levelNode.Children.Add(new ScenarioNode()
-                {
-                    Name = scenarioName,
-                    Scenario = scenario
-                });
-
-            }
-        }
-    }
-
-    public void UpdateVisuals()
-    {
-        foreach (var location in VisualCollection)
-        {
-            location.UpdateVisuals();
-        }
-    }
 
 }
