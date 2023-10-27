@@ -590,7 +590,7 @@ public class Navigator
     /// <summary>
     /// Return the rasterized line from start to end, including the start / end points themselves.
     /// </summary>
-    private static IEnumerable<Vector2> GetPointsOnLine(Vector2 start, Vector2 end)
+    public static IEnumerable<Vector2> GetPointsOnLine(Vector2 start, Vector2 end)
     {
         var delta = end - start;
 
@@ -745,7 +745,7 @@ public class Navigator
     /// <summary>
     /// Parse a single input coordinate pair like "56,89" into a Vector2
     /// </summary>
-    private static Vector2 ParseVector2(string input)
+    public static Vector2 ParseVector2(string input)
     {
         var coords = input.Split(',').Select(int.Parse).ToArray();
         return new Vector2(coords[0], coords[1]);
