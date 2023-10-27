@@ -19,38 +19,19 @@
             <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
 
-        <TreeView Grid.Column="0" ItemsSource="{Binding Scenarios}" SelectedItemChanged="OnScenarioChanged" >
-            <TreeView.ItemTemplate>
-                <HierarchicalDataTemplate DataType="{x:Type local:ScenarioNode}" ItemsSource="{Binding Children  }">
-                    <TextBlock Text="{Binding Name}" />
-                </HierarchicalDataTemplate>
-            </TreeView.ItemTemplate>
+        <StackPanel Grid.Column="0" >
+            <TreeView ItemsSource="{Binding Scenarios}" SelectedItemChanged="OnScenarioChanged" >
+                <TreeView.ItemTemplate>
+                    <HierarchicalDataTemplate DataType="{x:Type local:ScenarioNode}" ItemsSource="{Binding Children  }">
+                        <TextBlock Text="{Binding Name}" />
+                    </HierarchicalDataTemplate>
+                </TreeView.ItemTemplate>
+            </TreeView>
 
-        </TreeView>
+        </StackPanel>
 
-        <ScrollViewer Grid.Column="1" Width="1000" Height="1000" HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Visible">
-            <ItemsControl ItemsSource="{Binding VisualCollection}" >
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <Canvas Background="LightGray" />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-
-                <ItemsControl.ItemContainerStyle>
-                    <Style>
-                        <Setter Property="Canvas.Left" Value="{Binding PositionX, Converter={StaticResource PositionConverter}}" />
-                        <Setter Property="Canvas.Top" Value="{Binding PositionY, Converter={StaticResource PositionConverter}}" />
-                    </Style>
-                </ItemsControl.ItemContainerStyle>
-
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Rectangle Fill="{Binding Value, Converter={StaticResource BackgroundColorConverter}}" 
-                               Height="9" 
-                               Width="9" />
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+        <ScrollViewer Grid.Column="1" Width="950" Height="950" HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Visible">
+            <Image Source="{Binding MapImage.Source}" />
 
         </ScrollViewer>
 
