@@ -21,17 +21,31 @@ class MainViewModel : ViewModelBase
         set
         {
             SetValue(value);
-            ParseMap(value);
+            _currentInputIndex = 0;
+            if (value != null)
+            {
+                ParseMap(value);
+                CurrentInput = value.InputLines[_currentInputIndex];
+            }
         }
     }
 
-    public Image MapImage 
-    { 
+    public Image MapImage
+    {
         get => GetValue<Image>();
         set => SetValue(value);
     }
 
     public WriteableBitmap MapBitmap { get; set; }
+
+    public string CurrentInput
+    {
+        get => GetValue<string>();
+        set => SetValue(value);
+    }
+
+    private int _currentInputIndex = 0;
+
 
     private void ParseMap(Scenario currentScenario)
     {
@@ -60,7 +74,7 @@ class MainViewModel : ViewModelBase
                         'W' => color = Color.FromRgb(30, 110, 255),
                         _ => Color.FromRgb(255, 255, 255)
                     };
-                    
+
                     DrawRectangle(x, y, 9, color);
                 }
             }
@@ -143,7 +157,46 @@ class MainViewModel : ViewModelBase
     {
         ParseScenarios();
 
+        CurrentInput = string.Empty;
+
+        SolveCurrentScenario = new RelayCommand(CanSolveCurrentScenario, DoSolveCurrentScenario);
+        PreviousInput = new RelayCommand(CanPreviousInput, DoPreviousInput);
+        NextInput = new RelayCommand(CanNextInput, DoNextInput);
+
+
     }
+
+    public RelayCommand SolveCurrentScenario { get; }
+    public bool CanSolveCurrentScenario()
+    {
+        return CurrentScenario != null;
+    }
+    public void DoSolveCurrentScenario()
+    {
+
+    }
+
+    public RelayCommand PreviousInput { get; }
+    public bool CanPreviousInput()
+    {
+        return CurrentScenario != null && _currentInputIndex > 0;
+    }
+    public void DoPreviousInput()
+    {
+        CurrentInput = CurrentScenario.InputLines[--_currentInputIndex];
+    }
+
+    public RelayCommand NextInput { get; }
+    public bool CanNextInput()
+    {
+        return CurrentScenario != null && _currentInputIndex < CurrentScenario.InputLines.Count - 1;
+    }
+    public void DoNextInput()
+    {
+        CurrentInput = CurrentScenario.InputLines[++_currentInputIndex];
+
+    }
+
 
     private void ParseScenarios()
     {
