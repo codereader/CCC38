@@ -42,7 +42,14 @@ class MainViewModel : ViewModelBase
     public string CurrentInput
     {
         get => GetValue<string>();
-        set => SetValue(value);
+        set
+        {
+            SetValue(value);
+            if (CurrentScenario != null && !string.IsNullOrEmpty(value))
+            {
+                CurrentOutput = Navigator.Solve(CurrentScenario, value);
+            }
+        }
     }
 
     public string CurrentOutput
@@ -50,7 +57,6 @@ class MainViewModel : ViewModelBase
         get => GetValue<string>();
         set => SetValue(value);
     }
-
 
 
     private void ParseMap(Scenario currentScenario)
@@ -165,22 +171,8 @@ class MainViewModel : ViewModelBase
 
         CurrentInput = string.Empty;
 
-
-        Solve = new RelayCommand(CanSolve, DoSolve);
         PreviousInput = new RelayCommand(CanPreviousInput, DoPreviousInput);
         NextInput = new RelayCommand(CanNextInput, DoNextInput);
-
-
-    }
-
-    public RelayCommand Solve { get; }
-    public bool CanSolve()
-    {
-        return CurrentScenario != null;
-    }
-    public void DoSolve()
-    {
-       CurrentOutput = Navigator.Solve(CurrentScenario, CurrentInput);
     }
 
     public RelayCommand PreviousInput { get; }
