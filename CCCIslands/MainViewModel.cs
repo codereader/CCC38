@@ -28,14 +28,15 @@ class MainViewModel : ViewModelBase
 
     private void ParseMap(Scenario currentScenario)
     {
-        VisualCollection.Clear();
+       var temp = new ObservableCollection<VisualElement>();
+
 
         for (int y = 0; y < currentScenario.MapHeight; y++)
         {
             var currentLine = currentScenario.Map[y];
             for (int x = 0; x < currentScenario.MapWidth; x++)
             {
-                VisualCollection.Add(new VisualElement()
+                temp.Add(new VisualElement()
                 {
                     PositionX = x,
                     PositionY = y,
@@ -43,9 +44,10 @@ class MainViewModel : ViewModelBase
                 });
             }
         }
-        RaisePropertyChanged(nameof(VisualCollection));
 
-        UpdateVisuals();
+        VisualCollection = temp;
+
+        RaisePropertyChanged(nameof(VisualCollection));
     }
 
     public ObservableCollection<VisualElement> VisualCollection { get; set; } = new();
