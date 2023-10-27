@@ -15,7 +15,7 @@
 
     <Grid Margin="20">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="200" />
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
@@ -41,7 +41,9 @@
             </StackPanel>
 
 
-            <Button Margin="0,20,0,0" Padding="6" Command="{Binding SolveCurrentScenario}" >Solve</Button>
+            <Button Margin="0,20,0,0" Padding="6" Command="{Binding Solve}" >Solve</Button>
+
+            <TextBox Padding="6" Margin="0,10,0,0" Width="Auto" Text="{Binding CurrentOutput, Mode=OneWay}" HorizontalAlignment="Right" VerticalAlignment="Center" />
         </StackPanel>
 
         <ScrollViewer Margin="20,0,0,0" Grid.Column="2" Width="950" Height="950" HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Visible">

@@ -1,6 +1,7 @@
 ﻿using System.Data;
 using System.Numerics;
 using System.Text;
+using System.Xml;
 
 namespace IslandsLib;
 
@@ -44,147 +45,152 @@ public class Navigator
 
             foreach (var input in scenario.InputLines)
             {
-                var startPos = ParseVector2(input);
-
-                var islandPositions = FloodFillIsland(scenario.Map, startPos);
-
-                var islandBounds = Bounds.CreateFromSet(islandPositions);
-                var validBounds = islandBounds.ExpandBy(1);
-
-                var leftEdge = islandPositions.First(p => p.X == islandBounds.Min.X);
-                var firstWaterTile = new Vector2(leftEdge.X - 1, leftEdge.Y);
-
-                if (leftEdge.X < 0) throw new ArgumentOutOfRangeException("Start X out of range");
-
-                // find a tight sea route around the island
-                var startRoute = new Route();
-                startRoute.AddStartPoint(firstWaterTile);
-
-                var routesToInvestigate = new SortedList<int, List<Route>>();
-                routesToInvestigate.Add(startRoute.Length, new List<Route> { startRoute });
-
-                var visitedPoints = new HashSet<Vector2>();
-                visitedPoints.Add(firstWaterTile);
-
-                // We only consider beach tiles for the tight route around the island
-                var beachTiles = new HashSet<Vector2>();
-
-                foreach (var landTile in islandPositions)
-                {
-                    foreach (var direction in OrthogonalDirections)
-                    {
-                        var targetPoint = landTile + direction;
-
-                        if (IsWater(scenario.Map, targetPoint))
-                        {
-                            beachTiles.Add(targetPoint);
-                        }
-                    }
-                }
-
-                Route? winningRoute = null;
-
-                // First round we only go to the south or south east
-                var directions = SouthAndSouthEast;
-
-                while (routesToInvestigate.Count > 0)
-                {
-                    // Pick one of the shortest routes first
-                    var shortestRoutes = routesToInvestigate.First().Value;
-
-                    var route = shortestRoutes.First();
-                    shortestRoutes.Remove(route);
-
-                    if (shortestRoutes.Count == 0)
-                    {
-                        routesToInvestigate.Remove(route.Length);
-                    }
-
-                    //VisualizeRoute(route, map);
-
-                    var currentPos = route.EndPoint;
-
-                    foreach (var direction in directions)
-                    {
-                        var targetPoint = currentPos + direction;
-
-                        if (!validBounds.ContainsPoint(targetPoint))
-                        {
-                            continue; // out of valid bounds
-                        }
-
-                        if (!beachTiles.Contains(targetPoint))
-                        {
-                            continue;
-                        }
-
-                        if (route.Length > 1 && (targetPoint - route.SecondToLastPoint).LengthSquared() == 1.0f)
-                        {
-                            continue; // skip
-                        }
-
-                        if (visitedPoints.Contains(targetPoint))
-                        {
-                            if (targetPoint == firstWaterTile && RouteIsValid(route, validBounds) &&
-                                !RouteIsEncirclingOtherIsland(route, startPos, islandPositions, scenario.Map))
-                            {
-                                // Don't add the starting point to the route
-                                winningRoute = route;
-                                routesToInvestigate.Clear();
-                                break;
-                            }
-
-                            continue;
-                        }
-
-                        if (route.ContainsPoint(targetPoint))
-                        {
-                            continue;
-                        }
-
-                        if (IsLand(scenario.Map, targetPoint))
-                        {
-                            visitedPoints.Add(targetPoint);
-                            continue;
-                        }
-
-                        // If the route is crossing itself, discard
-                        if (route.PointIsCrossing(currentPos, targetPoint))
-                        {
-                            visitedPoints.Add(targetPoint);
-                            continue; // route would cross itself
-                        }
-
-                        var newRoute = route.Clone();
-
-                        newRoute.AddPoint(targetPoint);
-
-                        if (!routesToInvestigate.TryGetValue(newRoute.Length, out var targetRoutes))
-                        {
-                            targetRoutes = new List<Route>();
-                            routesToInvestigate.Add(newRoute.Length, targetRoutes);
-                        }
-                        targetRoutes.Add(newRoute);
-                    }
-
-                    directions = SeaRouteDirections; // From now on consider all options
-                }
-
-                if (winningRoute == null)
-                {
-                    throw new InvalidOperationException("No solution found");
-                }
-
-                // Optimize the winning route for distance
-                var optimizedRoute = OptimizeRoute(winningRoute, startPos, scenario.Map, islandPositions, validBounds);
-                //VisualizeRoute(optimizedRoute, map, optimizedRoute.Points);
-
-                output.AppendLine(winningRoute.ToString());
+                output.AppendLine(SolveLevel7(scenario, input));
             }
-
             outputWriter.Write(output.ToString());
         }
     }
+
+    private static string SolveLevel7(Scenario scenario, string input)
+    {
+        var startPos = ParseVector2(input);
+
+        var islandPositions = FloodFillIsland(scenario.Map, startPos);
+
+        var islandBounds = Bounds.CreateFromSet(islandPositions);
+        var validBounds = islandBounds.ExpandBy(1);
+
+        var leftEdge = islandPositions.First(p => p.X == islandBounds.Min.X);
+        var firstWaterTile = new Vector2(leftEdge.X - 1, leftEdge.Y);
+
+        if (leftEdge.X < 0) throw new ArgumentOutOfRangeException("Start X out of range");
+
+        // find a tight sea route around the island
+        var startRoute = new Route();
+        startRoute.AddStartPoint(firstWaterTile);
+
+        var routesToInvestigate = new SortedList<int, List<Route>>();
+        routesToInvestigate.Add(startRoute.Length, new List<Route> { startRoute });
+
+        var visitedPoints = new HashSet<Vector2>();
+        visitedPoints.Add(firstWaterTile);
+
+        // We only consider beach tiles for the tight route around the island
+        var beachTiles = new HashSet<Vector2>();
+
+        foreach (var landTile in islandPositions)
+        {
+            foreach (var direction in OrthogonalDirections)
+            {
+                var targetPoint = landTile + direction;
+
+                if (IsWater(scenario.Map, targetPoint))
+                {
+                    beachTiles.Add(targetPoint);
+                }
+            }
+        }
+
+        Route? winningRoute = null;
+
+        // First round we only go to the south or south east
+        var directions = SouthAndSouthEast;
+
+        while (routesToInvestigate.Count > 0)
+        {
+            // Pick one of the shortest routes first
+            var shortestRoutes = routesToInvestigate.First().Value;
+
+            var route = shortestRoutes.First();
+            shortestRoutes.Remove(route);
+
+            if (shortestRoutes.Count == 0)
+            {
+                routesToInvestigate.Remove(route.Length);
+            }
+
+            //VisualizeRoute(route, map);
+
+            var currentPos = route.EndPoint;
+
+            foreach (var direction in directions)
+            {
+                var targetPoint = currentPos + direction;
+
+                if (!validBounds.ContainsPoint(targetPoint))
+                {
+                    continue; // out of valid bounds
+                }
+
+                if (!beachTiles.Contains(targetPoint))
+                {
+                    continue;
+                }
+
+                if (route.Length > 1 && (targetPoint - route.SecondToLastPoint).LengthSquared() == 1.0f)
+                {
+                    continue; // skip
+                }
+
+                if (visitedPoints.Contains(targetPoint))
+                {
+                    if (targetPoint == firstWaterTile && RouteIsValid(route, validBounds) &&
+                        !RouteIsEncirclingOtherIsland(route, startPos, islandPositions, scenario.Map))
+                    {
+                        // Don't add the starting point to the route
+                        winningRoute = route;
+                        routesToInvestigate.Clear();
+                        break;
+                    }
+
+                    continue;
+                }
+
+                if (route.ContainsPoint(targetPoint))
+                {
+                    continue;
+                }
+
+                if (IsLand(scenario.Map, targetPoint))
+                {
+                    visitedPoints.Add(targetPoint);
+                    continue;
+                }
+
+                // If the route is crossing itself, discard
+                if (route.PointIsCrossing(currentPos, targetPoint))
+                {
+                    visitedPoints.Add(targetPoint);
+                    continue; // route would cross itself
+                }
+
+                var newRoute = route.Clone();
+
+                newRoute.AddPoint(targetPoint);
+
+                if (!routesToInvestigate.TryGetValue(newRoute.Length, out var targetRoutes))
+                {
+                    targetRoutes = new List<Route>();
+                    routesToInvestigate.Add(newRoute.Length, targetRoutes);
+                }
+                targetRoutes.Add(newRoute);
+            }
+
+            directions = SeaRouteDirections; // From now on consider all options
+        }
+
+        if (winningRoute == null)
+        {
+            throw new InvalidOperationException("No solution found");
+        }
+
+        // Optimize the winning route for distance
+        var optimizedRoute = OptimizeRoute(winningRoute, startPos, scenario.Map, islandPositions, validBounds);
+        //VisualizeRoute(optimizedRoute, map, optimizedRoute.Points);
+
+        return winningRoute.ToString();
+    }
+
 
     public void Level5_6(int level)
     {
@@ -198,109 +204,112 @@ public class Navigator
 
             foreach (var input in scenario.InputLines)
             {
-                var startPos = ParseVector2(input);
-
-                var islandPositions = FloodFillIsland(scenario.Map, startPos);
-
-                var islandBounds = Bounds.CreateFromSet(islandPositions);
-                var validBounds = islandBounds.ExpandBy(1);
-
-                var leftEdge = islandPositions.First(p => p.X == islandBounds.Min.X);
-                var firstWaterTile = new Vector2(leftEdge.X - 1, leftEdge.Y);
-
-                if (leftEdge.X < 0) throw new ArgumentOutOfRangeException("Start X out of range");
-
-                // find sea route around the island
-                var startRoute = new Route();
-                startRoute.AddStartPoint(firstWaterTile);
-
-                var routesToInvestigate = new SortedList<int, List<Route>>();
-                routesToInvestigate.Add(startRoute.Length, new List<Route> { startRoute });
-
-                var visitedPoints = new HashSet<Vector2>();
-                visitedPoints.Add(firstWaterTile);
-
-                Route? winningRoute = null;
-
-                // First round we only go to the south or south east
-                var directions = SouthAndSouthEast;
-
-                while (routesToInvestigate.Count > 0)
-                {
-                    // Pick one of the shortest routes first
-                    var shortestRoutes = routesToInvestigate.First().Value;
-
-                    var route = shortestRoutes[shortestRoutes.Count - 1];
-                    shortestRoutes.RemoveAt(shortestRoutes.Count - 1);
-
-                    if (shortestRoutes.Count == 0)
-                    {
-                        routesToInvestigate.Remove(route.Length);
-                    }
-
-                    var currentPos = route.EndPoint;
-
-                    foreach (var direction in directions)
-                    {
-                        var targetPoint = currentPos + direction;
-
-                        if (!validBounds.ContainsPoint(targetPoint))
-                        {
-                            continue; // out of valid bounds
-                        }
-
-                        if (visitedPoints.Contains(targetPoint))
-                        {
-                            if (targetPoint == firstWaterTile && RouteIsValid(route, validBounds))
-                            {
-                                // Don't add the starting point to the route
-                                winningRoute = route;
-                                routesToInvestigate.Clear();
-                                break;
-                            }
-
-                            continue;
-                        }
-
-                        if (IsLand(scenario.Map, targetPoint))
-                        {
-                            visitedPoints.Add(targetPoint);
-                            continue;
-                        }
-
-                        // If the route is crossing itself, discard
-                        if (route.PointIsCrossing(currentPos, targetPoint))
-                        {
-                            visitedPoints.Add(targetPoint);
-                            continue; // route would cross itself
-                        }
-
-                        var newRoute = route.Clone();
-
-                        newRoute.AddPoint(targetPoint);
-
-                        if (!routesToInvestigate.TryGetValue(newRoute.Length, out var targetRoutes))
-                        {
-                            targetRoutes = new List<Route>();
-                            routesToInvestigate.Add(newRoute.Length, targetRoutes);
-                        }
-                        targetRoutes.Add(newRoute);
-                        visitedPoints.Add(targetPoint);
-                    }
-
-                    directions = SeaRouteDirections; // From now on consider all options
-                }
-
-                if (winningRoute == null)
-                {
-                    throw new InvalidOperationException("No solution found");
-                }
-
-                output.AppendLine(winningRoute.ToString());
+                output.AppendLine(SolveLevel5(scenario, input));
             }
 
             outputWriter.Write(output.ToString());
         }
+    }
+    private static string SolveLevel5(Scenario scenario, string input)
+    {
+        var startPos = ParseVector2(input);
+
+        var islandPositions = FloodFillIsland(scenario.Map, startPos);
+
+        var islandBounds = Bounds.CreateFromSet(islandPositions);
+        var validBounds = islandBounds.ExpandBy(1);
+
+        var leftEdge = islandPositions.First(p => p.X == islandBounds.Min.X);
+        var firstWaterTile = new Vector2(leftEdge.X - 1, leftEdge.Y);
+
+        if (leftEdge.X < 0) throw new ArgumentOutOfRangeException("Start X out of range");
+
+        // find sea route around the island
+        var startRoute = new Route();
+        startRoute.AddStartPoint(firstWaterTile);
+
+        var routesToInvestigate = new SortedList<int, List<Route>>();
+        routesToInvestigate.Add(startRoute.Length, new List<Route> { startRoute });
+
+        var visitedPoints = new HashSet<Vector2>();
+        visitedPoints.Add(firstWaterTile);
+
+        Route? winningRoute = null;
+
+        // First round we only go to the south or south east
+        var directions = SouthAndSouthEast;
+
+        while (routesToInvestigate.Count > 0)
+        {
+            // Pick one of the shortest routes first
+            var shortestRoutes = routesToInvestigate.First().Value;
+
+            var route = shortestRoutes[shortestRoutes.Count - 1];
+            shortestRoutes.RemoveAt(shortestRoutes.Count - 1);
+
+            if (shortestRoutes.Count == 0)
+            {
+                routesToInvestigate.Remove(route.Length);
+            }
+
+            var currentPos = route.EndPoint;
+
+            foreach (var direction in directions)
+            {
+                var targetPoint = currentPos + direction;
+
+                if (!validBounds.ContainsPoint(targetPoint))
+                {
+                    continue; // out of valid bounds
+                }
+
+                if (visitedPoints.Contains(targetPoint))
+                {
+                    if (targetPoint == firstWaterTile && RouteIsValid(route, validBounds))
+                    {
+                        // Don't add the starting point to the route
+                        winningRoute = route;
+                        routesToInvestigate.Clear();
+                        break;
+                    }
+
+                    continue;
+                }
+
+                if (IsLand(scenario.Map, targetPoint))
+                {
+                    visitedPoints.Add(targetPoint);
+                    continue;
+                }
+
+                // If the route is crossing itself, discard
+                if (route.PointIsCrossing(currentPos, targetPoint))
+                {
+                    visitedPoints.Add(targetPoint);
+                    continue; // route would cross itself
+                }
+
+                var newRoute = route.Clone();
+
+                newRoute.AddPoint(targetPoint);
+
+                if (!routesToInvestigate.TryGetValue(newRoute.Length, out var targetRoutes))
+                {
+                    targetRoutes = new List<Route>();
+                    routesToInvestigate.Add(newRoute.Length, targetRoutes);
+                }
+                targetRoutes.Add(newRoute);
+                visitedPoints.Add(targetPoint);
+            }
+
+            directions = SeaRouteDirections; // From now on consider all options
+        }
+
+        if (winningRoute == null)
+        {
+            throw new InvalidOperationException("No solution found");
+        }
+        return winningRoute.ToString();
     }
 
     public void Level4()
@@ -315,95 +324,102 @@ public class Navigator
 
             foreach (var input in scenario.InputLines)
             {
-                var (startPos, endPos) = ParseCoordinatePair(input);
-
-                var startRoute = new Route();
-                startRoute.AddStartPoint(startPos);
-
-                var visitedPoints = new HashSet<Vector2>();
-
-                var routesToInvestigate = new SortedList<int, List<Route>>();
-                routesToInvestigate.Add(startRoute.Length, new List<Route> { startRoute });
-
-                var directions = SeaRouteDirections;
-
-                Route? winningRoute = null;
-
-                while (routesToInvestigate.Count > 0)
-                {
-                    // Pick one of the shortest routes first
-                    var shortestRoutes = routesToInvestigate.First().Value;
-
-                    var route = shortestRoutes[shortestRoutes.Count - 1];
-                    shortestRoutes.RemoveAt(shortestRoutes.Count - 1);
-
-                    if (shortestRoutes.Count == 0)
-                    {
-                        routesToInvestigate.Remove(route.Length);
-                    }
-
-                    var currentPos = route.EndPoint;
-
-                    foreach (var direction in directions)
-                    {
-                        var targetPoint = currentPos + direction;
-
-                        if (!scenario.MapBounds.ContainsPoint(targetPoint))
-                        {
-                            continue; // out of bounds
-                        }
-
-                        if (visitedPoints.Contains(targetPoint))
-                        {
-                            continue;
-                        }
-
-                        if (targetPoint == endPos)
-                        {
-                            route.AddPoint(targetPoint);
-                            winningRoute = route;
-                            routesToInvestigate.Clear();
-                            break;
-                        }
-
-                        if (IsLand(scenario.Map, targetPoint))
-                        {
-                            visitedPoints.Add(targetPoint);
-                            continue;
-                        }
-
-                        // If the route is crossing itself, discard
-                        if (route.PointIsCrossing(currentPos, targetPoint))
-                        {
-                            visitedPoints.Add(targetPoint);
-                            continue; // route would cross itself
-                        }
-
-                        var newRoute = route.Clone();
-
-                        newRoute.AddPoint(targetPoint);
-
-                        if (!routesToInvestigate.TryGetValue(newRoute.Length, out var targetRoutes))
-                        {
-                            targetRoutes = new List<Route>();
-                            routesToInvestigate.Add(newRoute.Length, targetRoutes);
-                        }
-                        targetRoutes.Add(newRoute);
-                        visitedPoints.Add(targetPoint);
-                    }
-                }
-
-                if (winningRoute == null)
-                {
-                    throw new InvalidOperationException("No solution found");
-                }
-
-                output.AppendLine(winningRoute.ToString());
+                
+                output.AppendLine(SolveLevel4(scenario, input));
             }
 
             outputWriter.Write(output.ToString());
         }
     }
+
+    private static string SolveLevel4(Scenario scenario, string input)
+    {
+        var (startPos, endPos) = ParseCoordinatePair(input);
+
+        var startRoute = new Route();
+        startRoute.AddStartPoint(startPos);
+
+        var visitedPoints = new HashSet<Vector2>();
+
+        var routesToInvestigate = new SortedList<int, List<Route>>();
+        routesToInvestigate.Add(startRoute.Length, new List<Route> { startRoute });
+
+        var directions = SeaRouteDirections;
+
+        Route? winningRoute = null;
+
+        while (routesToInvestigate.Count > 0)
+        {
+            // Pick one of the shortest routes first
+            var shortestRoutes = routesToInvestigate.First().Value;
+
+            var route = shortestRoutes[shortestRoutes.Count - 1];
+            shortestRoutes.RemoveAt(shortestRoutes.Count - 1);
+
+            if (shortestRoutes.Count == 0)
+            {
+                routesToInvestigate.Remove(route.Length);
+            }
+
+            var currentPos = route.EndPoint;
+
+            foreach (var direction in directions)
+            {
+                var targetPoint = currentPos + direction;
+
+                if (!scenario.MapBounds.ContainsPoint(targetPoint))
+                {
+                    continue; // out of bounds
+                }
+
+                if (visitedPoints.Contains(targetPoint))
+                {
+                    continue;
+                }
+
+                if (targetPoint == endPos)
+                {
+                    route.AddPoint(targetPoint);
+                    winningRoute = route;
+                    routesToInvestigate.Clear();
+                    break;
+                }
+
+                if (IsLand(scenario.Map, targetPoint))
+                {
+                    visitedPoints.Add(targetPoint);
+                    continue;
+                }
+
+                // If the route is crossing itself, discard
+                if (route.PointIsCrossing(currentPos, targetPoint))
+                {
+                    visitedPoints.Add(targetPoint);
+                    continue; // route would cross itself
+                }
+
+                var newRoute = route.Clone();
+
+                newRoute.AddPoint(targetPoint);
+
+                if (!routesToInvestigate.TryGetValue(newRoute.Length, out var targetRoutes))
+                {
+                    targetRoutes = new List<Route>();
+                    routesToInvestigate.Add(newRoute.Length, targetRoutes);
+                }
+                targetRoutes.Add(newRoute);
+                visitedPoints.Add(targetPoint);
+            }
+        }
+
+        if (winningRoute == null)
+        {
+            throw new InvalidOperationException("No solution found");
+        }
+
+        return winningRoute.ToString();
+    }
+
 
     public void Level3()
     {
@@ -417,48 +433,53 @@ public class Navigator
 
             foreach (var input in scenario.InputLines)
             {
-                var numberPairs = input.Split(' ').ToArray();
-
-                var visitedPositions = new HashSet<Vector2>();
-                var intersectsWithItself = false;
-
-                var startPos = ParseVector2(numberPairs.First());
-                visitedPositions.Add(startPos);
-
-                var lastPos = startPos;
-
-                foreach (var coordPair in numberPairs.Skip(1))
-                {
-                    var pos = ParseVector2(coordPair);
-
-                    if (visitedPositions.Contains(pos))
-                    {
-                        // Direct hit
-                        intersectsWithItself = true;
-                        break;
-                    }
-
-                    var halfPos = (pos + lastPos) / 2;
-
-                    if (visitedPositions.Contains(halfPos))
-                    {
-                        // Halfpos hit
-                        intersectsWithItself = true;
-                        break;
-                    }
-
-                    visitedPositions.Add(halfPos);
-                    visitedPositions.Add(pos);
-
-                    lastPos = pos;
-                }
-
-                output.AppendLine(intersectsWithItself ? "INVALID" : "VALID");
+                output.AppendLine(SolveLevel3(scenario, input));
             }
 
             outputWriter.Write(output.ToString());
         }
     }
+
+    private static string SolveLevel3(Scenario scenario, string input)
+    {
+        var numberPairs = input.Split(' ').ToArray();
+
+        var visitedPositions = new HashSet<Vector2>();
+        var intersectsWithItself = false;
+
+        var startPos = ParseVector2(numberPairs.First());
+        visitedPositions.Add(startPos);
+
+        var lastPos = startPos;
+
+        foreach (var coordPair in numberPairs.Skip(1))
+        {
+            var pos = ParseVector2(coordPair);
+
+            if (visitedPositions.Contains(pos))
+            {
+                // Direct hit
+                intersectsWithItself = true;
+                break;
+            }
+
+            var halfPos = (pos + lastPos) / 2;
+
+            if (visitedPositions.Contains(halfPos))
+            {
+                // Halfpos hit
+                intersectsWithItself = true;
+                break;
+            }
+
+            visitedPositions.Add(halfPos);
+            visitedPositions.Add(pos);
+
+            lastPos = pos;
+        }
+        return intersectsWithItself ? "INVALID" : "VALID";
+    }
+
 
     public void Level2()
     {
@@ -472,51 +493,57 @@ public class Navigator
 
             foreach (var input in scenario.InputLines)
             {
-                var (pos1, pos2) = ParseCoordinatePair(input);
-
-                var availablePositions = new Stack<Vector2>();
-                availablePositions.Push(pos1);
-
-                var visitedPositions = new HashSet<Vector2>();
-
-                bool isOnSameIsland = false;
-
-                var directions = OrthogonalDirections;
-
-                while (availablePositions.Count > 0)
-                {
-                    var nextPos = availablePositions.Pop();
-
-                    visitedPositions.Add(nextPos); // mark as done
-
-                    if (nextPos == pos2)
-                    {
-                        isOnSameIsland = true;
-                        break;
-                    }
-
-                    foreach (var dir in directions)
-                    {
-                        var candidate = nextPos + dir;
-
-                        if (!scenario.MapBounds.ContainsPoint(candidate))
-                        {
-                            continue; // out of bounds
-                        }
-
-                        if (!visitedPositions.Contains(candidate) && IsLand(scenario.Map, candidate))
-                        {
-                            availablePositions.Push(candidate);
-                        }
-                    }
-                }
-
-                output.AppendLine(isOnSameIsland ? "SAME" : "DIFFERENT");
+                output.AppendLine(SolveLevel2(scenario, input));
             }
 
             outputWriter.Write(output.ToString());
         }
     }
+
+    private static string SolveLevel2(Scenario scenario, string input)
+    {
+        var (pos1, pos2) = ParseCoordinatePair(input);
+
+        var availablePositions = new Stack<Vector2>();
+        availablePositions.Push(pos1);
+
+        var visitedPositions = new HashSet<Vector2>();
+
+        bool isOnSameIsland = false;
+
+        var directions = OrthogonalDirections;
+
+        while (availablePositions.Count > 0)
+        {
+            var nextPos = availablePositions.Pop();
+
+            visitedPositions.Add(nextPos); // mark as done
+
+            if (nextPos == pos2)
+            {
+                isOnSameIsland = true;
+                break;
+            }
+
+            foreach (var dir in directions)
+            {
+                var candidate = nextPos + dir;
+
+                if (!scenario.MapBounds.ContainsPoint(candidate))
+                {
+                    continue; // out of bounds
+                }
+
+                if (!visitedPositions.Contains(candidate) && IsLand(scenario.Map, candidate))
+                {
+                    availablePositions.Push(candidate);
+                }
+            }
+        }
+
+        return isOnSameIsland ? "SAME" : "DIFFERENT";
+    }
+
 
     public void Level1()
     {
@@ -530,14 +557,38 @@ public class Navigator
 
             foreach (var input in scenario.InputLines)
             {
-                var pos = ParseVector2(input);
-
-                output.Append(scenario.Map[(int)pos.Y][(int)pos.X]);
+                output.Append(SolveLevel1(scenario, input));
                 output.AppendLine();
             }
 
             outputWriter.Write(output.ToString());
         }
+    }
+    private static string SolveLevel1(Scenario scenario, string input)
+    {
+        var pos = ParseVector2(input);
+        return scenario.Map[(int)pos.Y][(int)pos.X].ToString();
+    }
+
+    public static string Solve(Scenario scenario, string input)
+    {
+        var level = scenario.Level;
+
+        return level switch
+        {
+            1 => SolveLevel1(scenario, input),
+            2 => SolveLevel2(scenario, input),
+            3 => SolveLevel3(scenario, input),
+            4 => SolveLevel4(scenario, input),
+            5 => SolveLevel5(scenario, input),
+            6 => SolveLevel5(scenario, input),
+            7 => SolveLevel7(scenario, input),
+
+            _ => string.Empty
+        };
+
+
+
     }
 
 

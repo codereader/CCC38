@@ -38,13 +38,19 @@ class MainViewModel : ViewModelBase
 
     public WriteableBitmap MapBitmap { get; set; }
 
+    private int _currentInputIndex = 0;
     public string CurrentInput
     {
         get => GetValue<string>();
         set => SetValue(value);
     }
 
-    private int _currentInputIndex = 0;
+    public string CurrentOutput
+    {
+        get => GetValue<string>();
+        set => SetValue(value);
+    }
+
 
 
     private void ParseMap(Scenario currentScenario)
@@ -159,21 +165,22 @@ class MainViewModel : ViewModelBase
 
         CurrentInput = string.Empty;
 
-        SolveCurrentScenario = new RelayCommand(CanSolveCurrentScenario, DoSolveCurrentScenario);
+
+        Solve = new RelayCommand(CanSolve, DoSolve);
         PreviousInput = new RelayCommand(CanPreviousInput, DoPreviousInput);
         NextInput = new RelayCommand(CanNextInput, DoNextInput);
 
 
     }
 
-    public RelayCommand SolveCurrentScenario { get; }
-    public bool CanSolveCurrentScenario()
+    public RelayCommand Solve { get; }
+    public bool CanSolve()
     {
         return CurrentScenario != null;
     }
-    public void DoSolveCurrentScenario()
+    public void DoSolve()
     {
-
+       CurrentOutput = Navigator.Solve(CurrentScenario, CurrentInput);
     }
 
     public RelayCommand PreviousInput { get; }

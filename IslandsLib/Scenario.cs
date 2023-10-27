@@ -14,7 +14,7 @@ public class Scenario
         MapBounds = new Bounds(0, 0, MapWidth - 1, MapHeight - 1);
 
         InputLines = Lines.Skip(1 + MapHeight + 1).ToList();
-        Level = Level;
+        Level = level;
     }
 
     public int Level { get; }
